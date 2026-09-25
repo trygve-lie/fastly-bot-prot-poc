@@ -49,19 +49,8 @@ export const homePage = html`
       </div>
     </section>
 
-    <wa-divider></wa-divider>
-
-    <section class="wa-stack wa-gap-s">
-      <h2 class="wa-heading-m">Your account</h2>
-      <div class="wa-cluster wa-gap-s">
-        <wa-button href="/account" appearance="outlined">
-          <wa-icon slot="prefix" name="circle-user"></wa-icon>
-          Account
-        </wa-button>
-        <wa-button href="/messaging" appearance="outlined">
-          <wa-icon slot="prefix" name="envelope"></wa-icon>
-          Messages
-        </wa-button>
-      </div>
-    </section>
+    <wa-button id="install-btn" variant="brand" hidden>
+      <wa-icon slot="prefix" name="download"></wa-icon>
+      Install app
+    </wa-button>
   </div>`;

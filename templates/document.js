@@ -25,6 +25,8 @@ export function document(title, body, opts = {}) {
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="theme-color" content="#ffffff" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     ${description ? html`<meta name="description" content="${description}" />` : ''}
     <title>${title}</title>
     <script type="module" src="${waBasePath}/webawesome.loader.js"></script>
@@ -64,6 +66,11 @@ export function document(title, body, opts = {}) {
   <body>
     ${body}
     <script type="module" src="${clientScriptPath}"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(function () {});
+      }
+    </script>
   </body>
 </html>`;
 }

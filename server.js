@@ -25,6 +25,11 @@ app.use('/public/*', async (c, next) => {
 });
 app.use('/public/*', serveStatic({ root: './' }));
 
+// PWA assets served from root scope so the service worker controls the whole origin
+app.get('/manifest.json', serveStatic({ path: './public/manifest.json' }));
+app.get('/sw.js',         serveStatic({ path: './public/sw.js' }));
+app.get('/icons/:file',   serveStatic({ root: './public' }));
+
 // ---------------------------------------------------------------------------
 // Dummy data
 // ---------------------------------------------------------------------------
