@@ -1,0 +1,50 @@
+/*
+  Cross-document view transitions: whole-page horizontal slide, sticky header.
+
+  Strategy
+  --------
+  html gets view-transition-name: page-root so the ENTIRE page is captured as
+  one full-viewport unit (always 100vw × 100vh regardless of scroll position or
+  content height). This is what prevents vertical drift: because the group rect
+  is always the viewport, there is no height difference between pages to
+  interpolate.
+
+  <header> (light DOM) is carved out into its own "site-header" pseudo-element
+  and frozen: old snapshot visible throughout (icons fully rendered), new
+  snapshot hidden (WA components may not be upgraded when new-page fires).
+  The shadow DOM wa-page header wrapper is not separately captured — it slides
+  away as part of page-root, but the new page's identical shadow wrapper is
+  always visible as the live backdrop directly underneath. Together they keep
+  the header area visually complete throughout the transition with no gap.
+
+  The drawer (wa-drawer) uses <dialog> in the browser top layer. Our click
+  handler closes the drawer and waits for wa-after-hide before calling
+  location.assign(), so the drawer is always gone before the snapshot fires.
+*/
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+
+  @keyframes slide-out-to-left   { to   { translate: -100vw 0; } }
+  @keyframes slide-in-from-right { from { translate:  100vw 0; } }
+  @keyframes slide-out-to-right  { to   { translate:  100vw 0; } }
+  @keyframes slide-in-from-left  { from { translate: -100vw 0; } }
+
+  html:active-view-transition-type(forwards, backwards) {
+    view-transition-name: page-root;
+    header { view-transition-name: site-header; }
+
+    &::view-transition-old(site-header) { animation: none; mix-blend-mode: normal; }
+    &::view-transition-new(site-header) { opacity: 0; }
+  }
+
+  html:active-view-transition-type(forwards) {
+    &::view-transition-old(page-root) { animation-name: slide-out-to-left; }
+    &::view-transition-new(page-root) { animation-name: slide-in-from-right; }
+  }
+
+  html:active-view-transition-type(backwards) {
+    &::view-transition-old(page-root) { animation-name: slide-out-to-right; }
+    &::view-transition-new(page-root) { animation-name: slide-in-from-left; }
+  }
+}
