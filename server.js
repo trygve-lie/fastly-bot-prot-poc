@@ -164,6 +164,50 @@ const navLinks = html`
   <a href="/messaging">Messages</a>`;
 
 // ---------------------------------------------------------------------------
+// SEO
+// ---------------------------------------------------------------------------
+
+app.get('/robots.txt', (c) => {
+  const origin = new URL(c.req.url).origin;
+  c.header('Content-Type', 'text/plain');
+  c.header('Cache-Control', 'public, max-age=86400');
+  return c.text(`User-agent: *\nAllow: /\n\nSitemap: ${origin}/sitemap.xml\n`);
+});
+
+app.get('/sitemap.xml', (c) => {
+  const origin = new URL(c.req.url).origin;
+  const today = new Date().toISOString().slice(0, 10);
+
+  const urls = [
+    { loc: '/',       priority: '1.0', changefreq: 'daily' },
+  ];
+
+  for (const [key, vertical] of Object.entries(VERTICALS)) {
+    urls.push({ loc: `/${key}`,        priority: '0.9', changefreq: 'daily' });
+    urls.push({ loc: `/${key}/search`, priority: '0.8', changefreq: 'daily' });
+    for (const listing of vertical.listings) {
+      urls.push({ loc: `/${key}/item/${listing.id}`, priority: '0.7', changefreq: 'weekly' });
+    }
+  }
+
+  const entries = urls.map(u => `  <url>
+    <loc>${origin}${u.loc}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${u.changefreq}</changefreq>
+    <priority>${u.priority}</priority>
+  </url>`).join('\n');
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entries}
+</urlset>`;
+
+  c.header('Content-Type', 'application/xml');
+  c.header('Cache-Control', 'public, max-age=3600');
+  return c.body(xml);
+});
+
+// ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
 
