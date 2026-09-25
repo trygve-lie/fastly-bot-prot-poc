@@ -1,7 +1,10 @@
 html, body { min-height: 100%; padding: 0; margin: 0; }
 wa-page::part(main-content) { padding: 0; }
-main { padding: 5px; }
-wa-page::part(header) { border-block-end: 1px solid var(--wa-color-border-normal); }
+main { padding: 5px 5px calc(5px + env(safe-area-inset-bottom)); }
+wa-page::part(header) {
+  border-block-end: 1px solid var(--wa-color-border-normal);
+  padding-top: env(safe-area-inset-top);
+}
 
 .page-main {
   padding: var(--wa-space-m);
