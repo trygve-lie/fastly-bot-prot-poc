@@ -167,8 +167,20 @@ const navLinks = html`
 // SEO
 // ---------------------------------------------------------------------------
 
+// Resolve the public-facing origin regardless of whether the request arrived
+// directly or via a CDN. Priority:
+//   1. ORIGIN env var — explicit override, set this in production (e.g. https://typegear.app)
+//   2. X-Forwarded-Proto + X-Forwarded-Host — set by Fastly and most CDNs
+//   3. Host header + request protocol — fallback for local dev
+function publicOrigin(c) {
+  if (process.env.ORIGIN) return process.env.ORIGIN.replace(/\/$/, '');
+  const proto = c.req.header('x-forwarded-proto') || new URL(c.req.url).protocol.replace(':', '');
+  const host  = c.req.header('x-forwarded-host')  || c.req.header('host') || new URL(c.req.url).host;
+  return `${proto}://${host}`;
+}
+
 app.get('/robots.txt', (c) => {
-  const origin = new URL(c.req.url).origin;
+  const origin = publicOrigin(c);
   c.header('Content-Type', 'text/plain');
   c.header('Cache-Control', 'public, max-age=86400');
   return c.text(`User-agent: *\nAllow: /\n\nSitemap: ${origin}/sitemap.xml\n`);
