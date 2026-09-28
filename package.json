@@ -1,13 +1,11 @@
 {
   "name": "fastly-bot-prot-poc",
-  "version": "0.0.1",
-  "type": "module",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
-  },
-  "dependencies": {
-    "@hono/node-server": "2.1.1",
-    "hono": "4.13.9"
+    "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "dev:api-mobility": "npm run dev --workspace=apps/api-mobility"
   }
 }

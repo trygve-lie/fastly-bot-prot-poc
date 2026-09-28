@@ -1,10 +1,19 @@
 services:
   - type: web
-    name: fastly-poc
+    name: frontend
     runtime: node
     buildCommand: npm install
-    startCommand: node server.js
+    startCommand: cd apps/frontend && node server.js
     healthCheckPath: /
     envVars:
       - key: NODE_VERSION
-        value: 20
+        value: 24
+
+  - type: pserv
+    name: api-mobility
+    runtime: node
+    buildCommand: npm install
+    startCommand: cd apps/api-mobility && node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 24
