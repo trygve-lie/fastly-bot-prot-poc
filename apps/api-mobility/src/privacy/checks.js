@@ -42,7 +42,7 @@ export function buildPrivacyReport(vehicles, configHash, seed) {
   let schemaValidationErrors = 0;
 
   for (const vehicle of vehicles) {
-    for (const fieldName of ['title_synthetic', 'description_synthetic']) {
+    for (const fieldName of ['title', 'text', 'description_synthetic']) {
       const text = vehicle[fieldName];
       warnings.push(...scanTextPatterns(vehicle, fieldName, text));
       const digest = createHash('sha256').update(text, 'utf-8').digest('hex');

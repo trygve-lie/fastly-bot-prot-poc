@@ -37,7 +37,8 @@ const ADDRESS_RE = /\b\d{1,4}\s+[A-Za-zÆØÅæøå]+(?:\s+[A-Za-zÆØÅæøå]+
  * @property {number|null} battery_range_km
  * @property {number} days_on_market
  * @property {string} listing_status
- * @property {string} title_synthetic
+ * @property {string} title
+ * @property {string} text
  * @property {string} description_synthetic
  * @property {string[]} feature_tags
  * @property {string[]} image_stub_ids
@@ -94,7 +95,7 @@ function validateVehicle(v) {
   if ((v.fuel_type === 'petrol' || v.fuel_type === 'diesel') && v.battery_range_km != null) {
     throw new Error('petrol/diesel vehicles must have battery_range_km null');
   }
-  for (const field of ['title_synthetic', 'description_synthetic']) {
+  for (const field of ['title', 'text', 'description_synthetic']) {
     const value = v[field];
     if (!value || !value.trim()) throw new Error(`${field} must not be empty`);
     if (PHONE_RE.test(value) || EMAIL_RE.test(value) || ADDRESS_RE.test(value)) {

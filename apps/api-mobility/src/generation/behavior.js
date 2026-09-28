@@ -106,7 +106,7 @@ function listingTokens(vehicle) {
     vehicle.location_cluster.replace(/_/g, ' ').toLowerCase(),
   ]);
   for (const tag of vehicle.feature_tags) tokens.add(tag.replace(/_/g, ' ').toLowerCase());
-  for (const word of vehicle.title_synthetic.toLowerCase().split(' ')) tokens.add(word);
+  for (const word of vehicle.text.toLowerCase().split(' ')) tokens.add(word);
   return tokens;
 }
 

@@ -43,7 +43,8 @@ const ADDRESS_RE = /\b\d{1,4}\s+[A-Za-zÆØÅæøå]+(?:\s+[A-Za-zÆØÅæøå]+
  * @property {number} price_per_m2
  * @property {number} days_on_market
  * @property {string} listing_status
- * @property {string} title_synthetic
+ * @property {string} title
+ * @property {string} text
  * @property {string} description_synthetic
  * @property {string[]} amenity_tags
  * @property {string[]} image_stub_ids
@@ -105,7 +106,7 @@ function validateListing(l) {
   if (['detached', 'semi_detached', 'cabin'].includes(l.property_type) && l.common_costs_monthly > 0) throw new Error('common_costs_monthly should be zero for house-style properties');
   if (l.property_type === 'apartment' && l.plot_m2 != null && l.plot_m2 > 50) throw new Error('apartment plot_m2 must be null or minimal');
   if (l.property_type === 'cabin' && l.has_elevator) throw new Error('cabins cannot have elevators');
-  for (const field of ['title_synthetic', 'description_synthetic']) {
+  for (const field of ['title', 'text', 'description_synthetic']) {
     const value = l[field];
     if (!value || !value.trim()) throw new Error(`${field} must not be empty`);
     if (PHONE_RE.test(value) || EMAIL_RE.test(value) || ADDRESS_RE.test(value)) {

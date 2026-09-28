@@ -223,13 +223,26 @@ function titleFloorLabel(attrs) {
 }
 
 /**
- * Generates a synthetic listing title by filling a template with derived fields.
+ * Generates a short display title for a listing: "{n}-bed {type} in {municipality}".
+ * @param {Object} attrs - Must include bedrooms, property_type, municipality.
+ * @returns {string}
+ */
+export function buildTitle(attrs) {
+  const bedrooms = parseInt(attrs.bedrooms);
+  const propertyType = String(attrs.property_type).replace(/_/g, ' ');
+  const propertyTypeCap = propertyType.charAt(0).toUpperCase() + propertyType.slice(1);
+  if (!bedrooms) return `${propertyTypeCap} in ${attrs.municipality}`;
+  return `${bedrooms}-bed ${propertyType} in ${attrs.municipality}`;
+}
+
+/**
+ * Generates a long descriptive listing text by filling a template with derived fields.
  * @param {Object} attrs - Partial listing attributes (must include listing_id, property_type, bedrooms, etc.).
  * @param {string} mode - 'deterministic' or 'stochastic'.
  * @param {import('../rng.js').Rng} rng
  * @returns {string}
  */
-export function buildTitle(attrs, mode, rng) {
+export function buildText(attrs, mode, rng) {
   const template = pick(TITLE_TEMPLATES, mode, `${attrs.listing_id}:title`, rng);
   const title_prefix = pick(TITLE_PREFIXES, mode, `${attrs.listing_id}:title-prefix`, rng);
   const buyer_fit = pick(TITLE_BUYER_FITS, mode, `${attrs.listing_id}:buyer-fit`, rng);

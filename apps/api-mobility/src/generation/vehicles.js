@@ -1,6 +1,6 @@
 import { createRng } from '../rng.js';
 import { createVehicle } from '../schema/vehicle.js';
-import { buildTitle, buildDescription, MAKES_AND_MODELS } from './text.js';
+import { buildTitle, buildText, buildDescription, MAKES_AND_MODELS } from './text.js';
 import { buildPrivacyReport } from '../privacy/checks.js';
 
 const MAKE_NAMES = Object.keys(MAKES_AND_MODELS);
@@ -344,7 +344,8 @@ export function buildVehicle(config, rng, sequenceNumber, snapshotDate, listingS
     snapshot_date: resolved_snapshot_date,
   };
 
-  const title_synthetic = buildTitle(partialAttrs, config.text_mode, rng);
+  const title_label = buildTitle(partialAttrs);
+  const text_synthetic = buildText(partialAttrs, config.text_mode, rng);
   const description_synthetic = buildDescription(partialAttrs, config.text_mode, rng);
   const imageCount = rng.randint(1, config.max_images_per_listing);
   const image_stub_ids = Array.from({ length: imageCount }, (_, i) => `${listing_id}-img-${i + 1}`);
@@ -383,7 +384,8 @@ export function buildVehicle(config, rng, sequenceNumber, snapshotDate, listingS
     battery_range_km: batteryRangeKm,
     days_on_market,
     listing_status: resolved_status,
-    title_synthetic,
+    title: title_label,
+    text: text_synthetic,
     description_synthetic,
     feature_tags: featureTags,
     image_stub_ids,

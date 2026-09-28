@@ -253,6 +253,7 @@ export function createSearchBackend(searchConfig, documentRepository, embeddingS
       scoredHits.push({
         listing_id: doc.listing_id,
         title: doc.title,
+        text: doc.text,
         county: doc.county,
         municipality: doc.municipality,
         property_type: doc.property_type,

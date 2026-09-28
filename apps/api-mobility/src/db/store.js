@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS vehicles (
   battery_range_km INTEGER,
   days_on_market INTEGER,
   listing_status TEXT,
-  title_synthetic TEXT,
+  title TEXT,
+  text TEXT,
   description_synthetic TEXT,
   feature_tags TEXT,
   image_stub_ids TEXT,
@@ -133,7 +134,7 @@ export function openStore(dbPath) {
   }
 
   // Migrations for existing databases
-  for (const col of ['latitude REAL', 'longitude REAL', 'embedding TEXT']) {
+  for (const col of ['latitude REAL', 'longitude REAL', 'embedding TEXT', 'title TEXT', 'text TEXT']) {
     try { db.exec(`ALTER TABLE vehicles ADD COLUMN ${col}`); } catch (_) {}
   }
   for (const col of ['summary_json TEXT', 'evaluation_json TEXT', 'privacy_json TEXT']) {
@@ -148,11 +149,11 @@ export function openStore(dbPath) {
       has_sunroof, has_tow_hitch, has_winter_wheels, has_leather_seats, has_heated_seats, has_navigation,
       asking_price, total_price, price_per_year, battery_range_km,
       days_on_market, listing_status,
-      title_synthetic, description_synthetic, feature_tags, image_stub_ids,
+      title, text, description_synthetic, feature_tags, image_stub_ids,
       latitude, longitude, run_id
     ) VALUES (
       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
     )
   `);
 
@@ -209,7 +210,7 @@ export function openStore(dbPath) {
             v.has_leather_seats ? 1 : 0, v.has_heated_seats ? 1 : 0, v.has_navigation ? 1 : 0,
             v.asking_price, v.total_price, v.price_per_year, v.battery_range_km ?? null,
             v.days_on_market, v.listing_status,
-            v.title_synthetic, v.description_synthetic,
+            v.title, v.text, v.description_synthetic,
             JSON.stringify(v.feature_tags), JSON.stringify(v.image_stub_ids),
             v.latitude ?? null, v.longitude ?? null, runId
           );

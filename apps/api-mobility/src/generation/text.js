@@ -252,13 +252,22 @@ function formatMoney(value) {
 }
 
 /**
- * Generates a synthetic vehicle listing title by filling a template with derived fields.
+ * Generates a short display title for a vehicle: "{model_year} {make} {model}".
+ * @param {Object} attrs - Must include model_year, make, model.
+ * @returns {string}
+ */
+export function buildTitle(attrs) {
+  return `${attrs.model_year} ${attrs.make} ${attrs.model}`;
+}
+
+/**
+ * Generates a long descriptive vehicle listing text by filling a template with derived fields.
  * @param {Object} attrs
  * @param {string} mode
  * @param {import('../rng.js').Rng} rng
  * @returns {string}
  */
-export function buildTitle(attrs, mode, rng) {
+export function buildText(attrs, mode, rng) {
   const template = pick(TITLE_TEMPLATES, mode, `${attrs.listing_id}:title`, rng);
   const title_prefix = pick(TITLE_PREFIXES, mode, `${attrs.listing_id}:title-prefix`, rng);
   const buyer_fit = pick(TITLE_BUYER_FITS, mode, `${attrs.listing_id}:buyer-fit`, rng);

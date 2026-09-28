@@ -4,6 +4,7 @@ const ACTIVE_STATUSES = new Set(['created', 'active', 'updated', 'relisted']);
  * @typedef {Object} SearchDocument
  * @property {string} listing_id
  * @property {string} title
+ * @property {string} text
  * @property {string} body
  * @property {string} county
  * @property {string} municipality
@@ -61,6 +62,7 @@ export function listingToSearchDocument(vehicle) {
     + Math.max(0.0, (180 - vehicle.days_on_market) / 180) * 0.2
   );
   const body = [
+    vehicle.text,
     vehicle.description_synthetic,
     vehicle.vehicle_type.replace(/_/g, ' '),
     vehicle.make,
@@ -72,7 +74,8 @@ export function listingToSearchDocument(vehicle) {
   ].join(' ');
   return {
     listing_id: vehicle.listing_id,
-    title: vehicle.title_synthetic,
+    title: vehicle.title,
+    text: vehicle.text,
     body,
     county: vehicle.county,
     municipality: vehicle.municipality,

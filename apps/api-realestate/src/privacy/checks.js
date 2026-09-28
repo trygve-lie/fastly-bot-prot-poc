@@ -42,7 +42,7 @@ export function buildPrivacyReport(listings, configHash, seed) {
   let schemaValidationErrors = 0;
 
   for (const listing of listings) {
-    for (const fieldName of ['title_synthetic', 'description_synthetic']) {
+    for (const fieldName of ['title', 'text', 'description_synthetic']) {
       const text = listing[fieldName];
       warnings.push(...scanTextPatterns(listing, fieldName, text));
       const digest = createHash('sha256').update(text, 'utf-8').digest('hex');

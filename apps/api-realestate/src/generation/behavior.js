@@ -101,7 +101,7 @@ function listingTokens(listing) {
     listing.neighborhood_cluster.replace(/_/g, ' ').toLowerCase(),
   ]);
   for (const tag of listing.amenity_tags) tokens.add(tag.replace(/_/g, ' ').toLowerCase());
-  for (const word of listing.title_synthetic.toLowerCase().split(' ')) tokens.add(word);
+  for (const word of listing.text.toLowerCase().split(' ')) tokens.add(word);
   return tokens;
 }
 

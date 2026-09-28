@@ -72,7 +72,7 @@ function renderHomePage(state, params) {
     : '<li>No browse items.</li>';
 
   const selectedBlock = selectedDoc
-    ? `<div><h3>Listing Detail</h3><p><strong>${escapeHtml(selectedDoc.title)}</strong></p><p>${escapeHtml(selectedDoc.county)} / ${escapeHtml(selectedDoc.municipality)} / ${escapeHtml(selectedDoc.vehicle_type)}</p><p>Make: ${escapeHtml(selectedDoc.make)} ${escapeHtml(selectedDoc.model)} | Fuel: ${escapeHtml(selectedDoc.fuel_type)} | Mileage: ${selectedDoc.mileage_km.toLocaleString()} km | Price: ${selectedDoc.total_price.toLocaleString()} | Days on market: ${selectedDoc.days_on_market}</p></div>`
+    ? `<div><h3>Listing Detail</h3><p><strong>${escapeHtml(selectedDoc.title)}</strong></p><p><em>${escapeHtml(selectedDoc.text)}</em></p><p>${escapeHtml(selectedDoc.county)} / ${escapeHtml(selectedDoc.municipality)} / ${escapeHtml(selectedDoc.vehicle_type)}</p><p>Make: ${escapeHtml(selectedDoc.make)} ${escapeHtml(selectedDoc.model)} | Fuel: ${escapeHtml(selectedDoc.fuel_type)} | Mileage: ${selectedDoc.mileage_km.toLocaleString()} km | Price: ${selectedDoc.total_price.toLocaleString()} | Days on market: ${selectedDoc.days_on_market}</p></div>`
     : '<div><h3>Listing Detail</h3><p>Select a search result to inspect one vehicle in detail.</p></div>';
 
   const evalBaselines = state.evaluationSummary?.baselines || {};
@@ -140,7 +140,7 @@ function renderHomePage(state, params) {
     <section class="grid">
       <div class="card"><h2>Similar Vehicles</h2><ul>${similarItems}</ul></div>
       <div class="card"><h2>Recommended For This Search</h2><ul>${recommendationItems}</ul></div>
-      <div class="card"><h2>Browse: Commuters</h2><ul>${browseItems}</ul></div>
+      <div class="card"><h2>Intent: Commuters</h2><ul>${browseItems}</ul></div>
     </section>
   </main>
 </body>

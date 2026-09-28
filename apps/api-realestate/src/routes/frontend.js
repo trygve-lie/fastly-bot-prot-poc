@@ -69,7 +69,7 @@ function renderHomePage(state, params) {
     : '<li>No browse items.</li>';
 
   const selectedBlock = selectedDoc
-    ? `<div><h3>Listing Detail</h3><p><strong>${escapeHtml(selectedDoc.title)}</strong></p><p>${escapeHtml(selectedDoc.county)} / ${escapeHtml(selectedDoc.municipality)} / ${escapeHtml(selectedDoc.property_type)}</p><p>Price: ${selectedDoc.total_price.toLocaleString()} | Bedrooms: ${selectedDoc.bedrooms} | Days on market: ${selectedDoc.days_on_market}</p></div>`
+    ? `<div><h3>Listing Detail</h3><p><strong>${escapeHtml(selectedDoc.title)}</strong></p><p><em>${escapeHtml(selectedDoc.text)}</em></p><p>${escapeHtml(selectedDoc.county)} / ${escapeHtml(selectedDoc.municipality)} / ${escapeHtml(selectedDoc.property_type)}</p><p>Price: ${selectedDoc.total_price.toLocaleString()} | Bedrooms: ${selectedDoc.bedrooms} | Days on market: ${selectedDoc.days_on_market}</p></div>`
     : '<div><h3>Listing Detail</h3><p>Select a search result to inspect one listing in detail.</p></div>';
 
   const evalBaselines = state.evaluationSummary?.baselines || {};
@@ -136,7 +136,7 @@ function renderHomePage(state, params) {
     <section class="grid">
       <div class="card"><h2>Similar Listings</h2><ul>${similarItems}</ul></div>
       <div class="card"><h2>Recommended For This Search</h2><ul>${recommendationItems}</ul></div>
-      <div class="card"><h2>Browse: Family Upgraders</h2><ul>${browseItems}</ul></div>
+      <div class="card"><h2>Intent: Family Upgraders</h2><ul>${browseItems}</ul></div>
     </section>
   </main>
 </body>

@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS listings (
   price_per_m2 INTEGER,
   days_on_market INTEGER,
   listing_status TEXT,
-  title_synthetic TEXT,
+  title TEXT,
+  text TEXT,
   description_synthetic TEXT,
   amenity_tags TEXT,
   image_stub_ids TEXT,
@@ -143,7 +144,7 @@ export function openStore(dbPath) {
   }
 
   // Migrations for existing databases
-  for (const col of ['latitude REAL', 'longitude REAL', 'embedding TEXT']) {
+  for (const col of ['latitude REAL', 'longitude REAL', 'embedding TEXT', 'title TEXT', 'text TEXT']) {
     try { db.exec(`ALTER TABLE listings ADD COLUMN ${col}`); } catch (_) {}
   }
   for (const col of ['summary_json TEXT', 'evaluation_json TEXT', 'privacy_json TEXT']) {
@@ -158,11 +159,11 @@ export function openStore(dbPath) {
       build_year, condition, energy_rating, has_balcony, has_terrace, has_parking,
       has_elevator, has_garden, has_view, asking_price, total_price,
       common_costs_monthly, price_per_m2, days_on_market, listing_status,
-      title_synthetic, description_synthetic, amenity_tags, image_stub_ids,
+      title, text, description_synthetic, amenity_tags, image_stub_ids,
       latitude, longitude, run_id
     ) VALUES (
       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
     )
   `);
 
@@ -214,7 +215,7 @@ export function openStore(dbPath) {
             l.build_year, l.condition, l.energy_rating, l.has_balcony ? 1 : 0, l.has_terrace ? 1 : 0,
             l.has_parking ? 1 : 0, l.has_elevator ? 1 : 0, l.has_garden ? 1 : 0, l.has_view ? 1 : 0,
             l.asking_price, l.total_price, l.common_costs_monthly, l.price_per_m2, l.days_on_market,
-            l.listing_status, l.title_synthetic, l.description_synthetic,
+            l.listing_status, l.title, l.text, l.description_synthetic,
             JSON.stringify(l.amenity_tags), JSON.stringify(l.image_stub_ids),
             l.latitude ?? null, l.longitude ?? null, runId
           );

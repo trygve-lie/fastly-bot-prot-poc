@@ -4,6 +4,7 @@ const ACTIVE_STATUSES = new Set(['created', 'active', 'updated', 'relisted']);
  * @typedef {Object} SearchDocument
  * @property {string} listing_id
  * @property {string} title
+ * @property {string} text
  * @property {string} body
  * @property {string} county
  * @property {string} municipality
@@ -60,6 +61,7 @@ export function listingToSearchDocument(listing) {
     + Math.max(0.0, (180 - listing.days_on_market) / 180) * 0.2
   );
   const body = [
+    listing.text,
     listing.description_synthetic,
     listing.property_type.replace(/_/g, ' '),
     listing.county,
@@ -68,7 +70,8 @@ export function listingToSearchDocument(listing) {
   ].join(' ');
   return {
     listing_id: listing.listing_id,
-    title: listing.title_synthetic,
+    title: listing.title,
+    text: listing.text,
     body,
     county: listing.county,
     municipality: listing.municipality,

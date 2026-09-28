@@ -1,6 +1,6 @@
 import { createRng } from '../rng.js';
 import { createListing } from '../schema/listing.js';
-import { buildTitle, buildDescription } from './text.js';
+import { buildTitle, buildText, buildDescription } from './text.js';
 
 const URBAN_CLUSTERS = ['central_arc', 'transit_ring', 'waterfront_band', 'park_side'];
 const SUBURBAN_CLUSTERS = ['family_grove', 'ridge_lane', 'harbor_edge', 'forest_loop'];
@@ -313,7 +313,8 @@ export function buildListing(config, rng, sequenceNumber, snapshotDate, listingS
   };
 
   const [latitude, longitude] = sampleGeoPosition(municipality, rng);
-  const title_synthetic = buildTitle(partialAttrs, config.text_mode, rng);
+  const title_label = buildTitle(partialAttrs);
+  const text_synthetic = buildText(partialAttrs, config.text_mode, rng);
   const description_synthetic = buildDescription(partialAttrs, config.text_mode, rng);
   const imageCount = rng.randint(1, config.max_images_per_listing);
   const image_stub_ids = Array.from({ length: imageCount }, (_, i) => `${listing_id}-img-${i + 1}`);
@@ -352,7 +353,8 @@ export function buildListing(config, rng, sequenceNumber, snapshotDate, listingS
     price_per_m2: null,
     days_on_market,
     listing_status: resolved_status,
-    title_synthetic,
+    title: title_label,
+    text: text_synthetic,
     description_synthetic,
     amenity_tags,
     image_stub_ids,
