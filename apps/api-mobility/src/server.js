@@ -102,7 +102,9 @@ function buildDemoState(config, dbPath) {
 }
 
 /**
- * Entry point: parses CLI flags, builds demo state, composes Hono sub-apps, and starts the HTTP server.
+ * Entry point: binds the HTTP port immediately, then builds demo state asynchronously.
+ * Returns 503 on all non-health routes until state is ready, so the port is always
+ * reachable (no TCP connect timeouts) even during a cold-start generation run.
  * @returns {Promise<void>}
  */
 async function main() {
@@ -122,34 +124,43 @@ async function main() {
   const config = loadConfig(configPath);
   console.log(`Config loaded: seed=${config.seed}, vehicles=${config.listing_count}`);
 
-  console.log('Building demo state…');
-  const state = buildDemoState(config, dbPath);
-  console.log('Demo state ready.');
+  let state = null;
 
-  const shutdown = () => { try { state.store.close(); } catch (_) {} process.exit(0); };
+  const shutdown = () => { try { state?.store.close(); } catch (_) {} process.exit(0); };
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
 
   const app = new Hono();
-  app.get('/health', c => c.json({ status: 'ok' }));
-  app.route('/', createApiRouter(state));
-  app.route('/', createFrontendRouter(state));
+  app.get('/health', c => c.json({ status: state ? 'ok' : 'starting' }, state ? 200 : 503));
+  app.use('*', (c, next) => {
+    if (!state) return c.json({ error: 'Service is starting, please retry shortly' }, 503);
+    return next();
+  });
 
   serve({ fetch: app.fetch, port, hostname: host }, info => {
-    console.log(`Synthetic mobility demo server listening on http://${host}:${info.port}`);
-    if (!state.evaluationSummary) {
-      setImmediate(() => {
-        console.log('Running evaluation…');
-        try {
-          const result = runEvaluation(config, state.vehicles, state.behavior, state.privacySummary.warnings.length);
-          state.evaluationSummary = result.summary;
-          state.store.saveEvaluation(state.runId, result.summary);
-          console.log('Evaluation complete.');
-        } catch (err) {
-          console.error('Evaluation failed:', err);
-        }
-      });
-    }
+    console.log(`Listening on http://${host}:${info.port} — building demo state…`);
+
+    setImmediate(() => {
+      state = buildDemoState(config, dbPath);
+      console.log('Demo state ready.');
+
+      app.route('/', createApiRouter(state));
+      app.route('/', createFrontendRouter(state));
+
+      if (!state.evaluationSummary) {
+        setImmediate(() => {
+          console.log('Running evaluation…');
+          try {
+            const result = runEvaluation(config, state.vehicles, state.behavior, state.privacySummary.warnings.length);
+            state.evaluationSummary = result.summary;
+            state.store.saveEvaluation(state.runId, result.summary);
+            console.log('Evaluation complete.');
+          } catch (err) {
+            console.error('Evaluation failed:', err);
+          }
+        });
+      }
+    });
   });
 }
 
