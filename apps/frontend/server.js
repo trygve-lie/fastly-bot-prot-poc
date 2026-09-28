@@ -7,7 +7,11 @@ import {
   pageLayout, subPageLayout,
   homePage, verticalPage, searchPage, itemPage,
   accountPage, messagingPage,
+  intentVerticalPage,
+  realestateItemPage,
+  mobilityItemPage,
 } from './templates/index.js';
+
 
 const apiMobilityBase   = process.env.API_MOBILITY_URL   ? `http://${process.env.API_MOBILITY_URL}`   : 'http://localhost:3001';
 const apiRealestateBase = process.env.API_REALESTATE_URL ? `http://${process.env.API_REALESTATE_URL}` : 'http://localhost:3002';
@@ -239,24 +243,107 @@ app.get('/', (c) => c.html(pageLayout('Marketplace', homePage, navLinks, {
 })));
 
 // Vertical homes
-for (const [key, vertical] of Object.entries(VERTICALS)) {
-  app.get(`/${key}`, (c) => c.html(subPageLayout(vertical.name, verticalPage(vertical), '/', {
-    description: vertical.description,
-  })));
-  app.get(`/${key}/search`, (c) => {
-    const query = c.req.query('q') || '';
-    return c.html(subPageLayout(`Search ${vertical.name}`, searchPage(vertical, query), `/${key}`, {
-      description: `Search ${vertical.name.toLowerCase()} listings${query ? ` for "${query}"` : ''}.`,
-    }));
-  });
-  app.get(`/${key}/item/:id`, (c) => {
-    const entry = ALL_LISTINGS[c.req.param('id')];
-    if (!entry || entry.vertical.slug !== key) return c.notFound();
-    return c.html(subPageLayout(entry.listing.title, itemPage(entry.vertical, entry.listing), `/${key}/search`, {
-      description: entry.listing.description,
-    }));
-  });
-}
+app.get('/realestate', async (c) => {
+  let intent = '', items = [];
+  try {
+    const data = await fetch(`${apiRealestateBase}/api/intent?limit=10`).then(r => r.json());
+    intent = data.intent ?? '';
+    items = data.hits ?? [];
+  } catch (_) {}
+  return c.html(subPageLayout('Real Estate', intentVerticalPage({
+    icon: 'house', name: 'Real Estate', slug: 'realestate',
+    intentLabel: intent, items, typeKey: 'property_type',
+  }), '/', { description: 'Find apartments, houses and properties for sale and rent.' }));
+});
+
+app.get('/mobility', async (c) => {
+  let intent = '', items = [];
+  try {
+    const data = await fetch(`${apiMobilityBase}/api/intent?limit=10`).then(r => r.json());
+    intent = data.intent ?? '';
+    items = data.hits ?? [];
+  } catch (_) {}
+  return c.html(subPageLayout('Mobility', intentVerticalPage({
+    icon: 'car', name: 'Mobility', slug: 'mobility',
+    intentLabel: intent, items, typeKey: 'vehicle_type',
+  }), '/', { description: 'Find new and used cars, vans and motorbikes.' }));
+});
+
+// realestate — home is API-driven; item fetches from api-realestate
+app.get('/realestate/search', (c) => {
+  const query = c.req.query('q') || '';
+  return c.html(subPageLayout('Search Real Estate', searchPage(VERTICALS.realestate, query), '/realestate', {
+    description: `Search real estate listings${query ? ` for "${query}"` : ''}.`,
+  }));
+});
+app.get('/realestate/item/:id', async (c) => {
+  const id = c.req.param('id');
+  let listing = null;
+  try {
+    const res = await fetch(`${apiRealestateBase}/api/listings/${encodeURIComponent(id)}`);
+    if (res.ok) listing = await res.json();
+  } catch (_) {}
+  if (!listing) return c.notFound();
+  return c.html(subPageLayout(listing.title, realestateItemPage(listing), '/realestate/search', {
+    description: listing.text,
+  }));
+});
+
+// mobility — home is API-driven; item fetches from api-mobility
+app.get('/mobility/search', (c) => {
+  const query = c.req.query('q') || '';
+  return c.html(subPageLayout('Search Mobility', searchPage(VERTICALS.mobility, query), '/mobility', {
+    description: `Search mobility listings${query ? ` for "${query}"` : ''}.`,
+  }));
+});
+app.get('/mobility/item/:id', async (c) => {
+  const id = c.req.param('id');
+  let vehicle = null;
+  try {
+    const res = await fetch(`${apiMobilityBase}/api/vehicles/${encodeURIComponent(id)}`);
+    if (res.ok) vehicle = await res.json();
+  } catch (_) {}
+  if (!vehicle) return c.notFound();
+  return c.html(subPageLayout(vehicle.title, mobilityItemPage(vehicle), '/mobility/search', {
+    description: vehicle.text,
+  }));
+});
+
+// job
+app.get('/job', (c) => c.html(subPageLayout(VERTICALS.job.name, verticalPage(VERTICALS.job), '/', {
+  description: VERTICALS.job.description,
+})));
+app.get('/job/search', (c) => {
+  const query = c.req.query('q') || '';
+  return c.html(subPageLayout(`Search ${VERTICALS.job.name}`, searchPage(VERTICALS.job, query), '/job', {
+    description: `Search job listings${query ? ` for "${query}"` : ''}.`,
+  }));
+});
+app.get('/job/item/:id', (c) => {
+  const entry = ALL_LISTINGS[c.req.param('id')];
+  if (!entry || entry.vertical.slug !== 'job') return c.notFound();
+  return c.html(subPageLayout(entry.listing.title, itemPage(entry.vertical, entry.listing), '/job/search', {
+    description: entry.listing.description,
+  }));
+});
+
+// recommerce
+app.get('/recommerce', (c) => c.html(subPageLayout(VERTICALS.recommerce.name, verticalPage(VERTICALS.recommerce), '/', {
+  description: VERTICALS.recommerce.description,
+})));
+app.get('/recommerce/search', (c) => {
+  const query = c.req.query('q') || '';
+  return c.html(subPageLayout(`Search ${VERTICALS.recommerce.name}`, searchPage(VERTICALS.recommerce, query), '/recommerce', {
+    description: `Search recommerce listings${query ? ` for "${query}"` : ''}.`,
+  }));
+});
+app.get('/recommerce/item/:id', (c) => {
+  const entry = ALL_LISTINGS[c.req.param('id')];
+  if (!entry || entry.vertical.slug !== 'recommerce') return c.notFound();
+  return c.html(subPageLayout(entry.listing.title, itemPage(entry.vertical, entry.listing), '/recommerce/search', {
+    description: entry.listing.description,
+  }));
+});
 
 // User sections
 app.get('/account',   (c) => c.html(subPageLayout('Account',  accountPage,   '/', {

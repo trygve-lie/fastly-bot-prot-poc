@@ -94,6 +94,16 @@ export function createApiRouter(state) {
    * When q is absent: returns a browse feed for the given cluster (default: family_upgraders).
    * When q is present: runs a search and derives recommendations from the top results.
    */
+  /** GET /api/intent — random intent browse feed; query: limit. */
+  app.get('/api/intent', c => {
+    const segments = state.config.behavior.user_segments.map(s => s.name);
+    const cluster = segments[Math.floor(Math.random() * segments.length)];
+    const intent = cluster.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
+    const limit = parseInt(c.req.query('limit') || '0') || undefined;
+    const result = state.app.browseIntentCluster({ cluster, limit });
+    return c.json({ intent, cluster, hits: result.hits });
+  });
+
   app.get('/api/recommendations', c => {
     const p = new URL(c.req.url, 'http://localhost').searchParams;
     const limit = parseInt(p.get('limit') || '0') || undefined;
