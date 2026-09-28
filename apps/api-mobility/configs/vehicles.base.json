@@ -1,0 +1,215 @@
+{
+  "seed": 20260311,
+  "snapshot_date": "2026-03-11",
+  "listing_count": 5000,
+  "text_mode": "deterministic",
+  "max_images_per_listing": 4,
+  "calibration": {
+    "feature_bonus_per_tag": 0.015,
+    "price_noise_min": 0.90,
+    "price_noise_max": 1.10,
+    "new_vehicle_probability": 0.18,
+    "dealer_share": 0.62,
+    "vehicle_types": [
+      { "name": "suv",      "weight": 0.28, "price_multiplier": 1.15, "engine_kw_min": 90,  "engine_kw_max": 300, "mileage_min": 0, "mileage_max": 280000, "seats_typical": 5 },
+      { "name": "sedan",    "weight": 0.22, "price_multiplier": 1.00, "engine_kw_min": 60,  "engine_kw_max": 220, "mileage_min": 0, "mileage_max": 300000, "seats_typical": 5 },
+      { "name": "hatchback","weight": 0.20, "price_multiplier": 0.88, "engine_kw_min": 50,  "engine_kw_max": 180, "mileage_min": 0, "mileage_max": 320000, "seats_typical": 5 },
+      { "name": "estate",   "weight": 0.13, "price_multiplier": 1.05, "engine_kw_min": 80,  "engine_kw_max": 250, "mileage_min": 0, "mileage_max": 280000, "seats_typical": 5 },
+      { "name": "coupe",    "weight": 0.09, "price_multiplier": 1.22, "engine_kw_min": 100, "engine_kw_max": 450, "mileage_min": 0, "mileage_max": 200000, "seats_typical": 4 },
+      { "name": "van",      "weight": 0.08, "price_multiplier": 0.85, "engine_kw_min": 70,  "engine_kw_max": 180, "mileage_min": 0, "mileage_max": 400000, "seats_typical": 7 }
+    ],
+    "conditions": [
+      { "name": "new",       "weight": 0.08, "model_year_min": 2025, "model_year_max": 2026 },
+      { "name": "excellent", "weight": 0.22, "model_year_min": 2020, "model_year_max": 2024 },
+      { "name": "good",      "weight": 0.38, "model_year_min": 2013, "model_year_max": 2021 },
+      { "name": "fair",      "weight": 0.22, "model_year_min": 2005, "model_year_max": 2015 },
+      { "name": "poor",      "weight": 0.10, "model_year_min": 1995, "model_year_max": 2010 }
+    ]
+  },
+  "churn": {
+    "timeline_days": 14,
+    "daily_new_rate": 0.03,
+    "daily_update_rate": 0.08,
+    "daily_removed_rate": 0.012,
+    "daily_sold_rate": 0.018,
+    "daily_relist_rate": 0.006,
+    "price_change_probability": 0.35,
+    "price_change_max_fraction": 0.06
+  },
+  "behavior": {
+    "session_count": 180,
+    "min_queries_per_session": 1,
+    "max_queries_per_session": 3,
+    "max_results_per_query": 8,
+    "candidate_pool_size": 24,
+    "click_threshold": 0.48,
+    "save_threshold": 0.7,
+    "contact_threshold": 0.84,
+    "abandonment_threshold": 0.35,
+    "user_segments": [
+      {
+        "name": "commuters",
+        "weight": 0.18,
+        "preferred_vehicle_types": ["hatchback", "sedan"],
+        "preferred_features": ["navigation", "cruise_control", "heated_seats"],
+        "preferred_regions": ["Oslo", "Vestland", "Trondelag", "Rogaland"],
+        "budget_min_ratio": 0.70,
+        "budget_max_ratio": 1.10,
+        "exploratory_share": 0.15
+      },
+      {
+        "name": "family_buyers",
+        "weight": 0.16,
+        "preferred_vehicle_types": ["suv", "van", "estate"],
+        "preferred_features": ["heated_seats", "rear_camera", "parking_sensors", "tow_hitch"],
+        "preferred_regions": ["Oslo", "Rogaland", "Vestland", "Trondelag"],
+        "budget_min_ratio": 0.85,
+        "budget_max_ratio": 1.25,
+        "exploratory_share": 0.12
+      },
+      {
+        "name": "first_car_buyers",
+        "weight": 0.12,
+        "preferred_vehicle_types": ["hatchback", "sedan"],
+        "preferred_features": ["winter_wheels", "navigation", "apple_carplay"],
+        "preferred_regions": ["Oslo", "Vestland", "Trondelag", "Agder"],
+        "budget_min_ratio": 0.55,
+        "budget_max_ratio": 0.88,
+        "exploratory_share": 0.22
+      },
+      {
+        "name": "eco_drivers",
+        "weight": 0.10,
+        "preferred_vehicle_types": ["hatchback", "suv", "sedan", "estate"],
+        "preferred_features": ["navigation", "apple_carplay", "lane_assist"],
+        "preferred_regions": ["Oslo", "Vestland", "Rogaland", "Trondelag"],
+        "budget_min_ratio": 0.80,
+        "budget_max_ratio": 1.20,
+        "exploratory_share": 0.20
+      },
+      {
+        "name": "sport_enthusiasts",
+        "weight": 0.09,
+        "preferred_vehicle_types": ["coupe", "sedan"],
+        "preferred_features": ["leather_seats", "sunroof", "navigation"],
+        "preferred_regions": ["Oslo", "Rogaland", "Vestland"],
+        "budget_min_ratio": 0.90,
+        "budget_max_ratio": 1.40,
+        "exploratory_share": 0.16
+      },
+      {
+        "name": "luxury_seekers",
+        "weight": 0.08,
+        "preferred_vehicle_types": ["sedan", "suv", "estate", "coupe"],
+        "preferred_features": ["leather_seats", "sunroof", "navigation", "blind_spot_warning"],
+        "preferred_regions": ["Oslo", "Rogaland", "Vestland"],
+        "budget_min_ratio": 1.10,
+        "budget_max_ratio": 1.60,
+        "exploratory_share": 0.14
+      },
+      {
+        "name": "budget_hunters",
+        "weight": 0.10,
+        "preferred_vehicle_types": ["hatchback", "sedan", "estate", "suv", "van"],
+        "preferred_features": ["winter_wheels", "cruise_control"],
+        "preferred_regions": ["Agder", "Nordland", "Trondelag"],
+        "budget_min_ratio": 0.45,
+        "budget_max_ratio": 0.80,
+        "exploratory_share": 0.18
+      },
+      {
+        "name": "van_buyers",
+        "weight": 0.07,
+        "preferred_vehicle_types": ["van", "estate"],
+        "preferred_features": ["tow_hitch", "rear_camera", "parking_sensors"],
+        "preferred_regions": ["Oslo", "Vestland", "Trondelag", "Rogaland"],
+        "budget_min_ratio": 0.75,
+        "budget_max_ratio": 1.15,
+        "exploratory_share": 0.10
+      },
+      {
+        "name": "brand_loyalists",
+        "weight": 0.06,
+        "preferred_vehicle_types": ["sedan", "suv"],
+        "preferred_features": ["apple_carplay", "navigation", "lane_assist"],
+        "preferred_regions": ["Oslo", "Vestland", "Rogaland"],
+        "budget_min_ratio": 0.82,
+        "budget_max_ratio": 1.18,
+        "exploratory_share": 0.12
+      },
+      {
+        "name": "exploratory_browsers",
+        "weight": 0.04,
+        "preferred_vehicle_types": ["hatchback", "sedan", "suv", "estate", "coupe", "van"],
+        "preferred_features": ["navigation", "apple_carplay", "sunroof", "winter_wheels"],
+        "preferred_regions": ["Oslo", "Vestland", "Nordland"],
+        "budget_min_ratio": 0.65,
+        "budget_max_ratio": 1.25,
+        "exploratory_share": 0.60
+      }
+    ]
+  },
+  "search": {
+    "embedding_dimensions": 16,
+    "lexical_weight": 0.45,
+    "vector_weight": 0.45,
+    "business_weight": 0.10,
+    "candidate_pool_size": 50,
+    "rerank_depth": 30,
+    "expansion_enabled": true,
+    "max_rewrites": 2,
+    "short_query_token_threshold": 2,
+    "default_page_size": 10
+  },
+  "discovery": {
+    "similar_results": 6,
+    "recommendation_results": 8,
+    "browse_results": 8,
+    "diversity_lambda": 0.15,
+    "behavior_boost_weight": 0.20
+  },
+  "counties": [
+    {
+      "name": "Oslo",
+      "municipalities": ["Oslo"],
+      "weight": 0.22,
+      "price_anchor": 320000,
+      "urban_share": 0.95
+    },
+    {
+      "name": "Vestland",
+      "municipalities": ["Bergen", "Askoy", "Alver"],
+      "weight": 0.18,
+      "price_anchor": 260000,
+      "urban_share": 0.72
+    },
+    {
+      "name": "Trondelag",
+      "municipalities": ["Trondheim", "Malvik", "Melhus"],
+      "weight": 0.17,
+      "price_anchor": 240000,
+      "urban_share": 0.68
+    },
+    {
+      "name": "Rogaland",
+      "municipalities": ["Stavanger", "Sandnes", "Sola"],
+      "weight": 0.19,
+      "price_anchor": 270000,
+      "urban_share": 0.70
+    },
+    {
+      "name": "Agder",
+      "municipalities": ["Kristiansand", "Lillesand", "Arendal"],
+      "weight": 0.13,
+      "price_anchor": 220000,
+      "urban_share": 0.58
+    },
+    {
+      "name": "Nordland",
+      "municipalities": ["Bodo", "Narvik", "Sortland"],
+      "weight": 0.11,
+      "price_anchor": 200000,
+      "urban_share": 0.44
+    }
+  ]
+}

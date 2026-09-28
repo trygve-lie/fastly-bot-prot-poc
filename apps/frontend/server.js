@@ -228,7 +228,7 @@ ${entries}
 
 app.get('/services', async (c) => {
   const [mobility, realestate] = await Promise.all([
-    fetch(`${apiMobilityBase}/listings`).then(r => r.json()),
+    fetch(`${apiMobilityBase}/api/search`).then(r => r.json()),
     fetch(`${apiRealestateBase}/listings`).then(r => r.json()),
   ]);
   return c.json({ mobility, realestate });

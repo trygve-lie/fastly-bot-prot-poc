@@ -25,7 +25,7 @@ services:
     runtime: node
     region: frankfurt
     buildCommand: npm install
-    startCommand: cd apps/api-mobility && node server.js
+    startCommand: cd apps/api-mobility && node src/server.js
     envVars:
       - key: NODE_VERSION
         value: 24
