@@ -17,3 +17,12 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 24
+
+  - type: pserv
+    name: api-realestate
+    runtime: node
+    buildCommand: npm install
+    startCommand: cd apps/api-realestate && node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 24
