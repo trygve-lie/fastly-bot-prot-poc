@@ -25,7 +25,11 @@ services:
     runtime: node
     region: frankfurt
     buildCommand: npm install
-    startCommand: cd apps/api-mobility && node src/server.js
+    startCommand: cd apps/api-mobility && node src/server.js --db /data/data.db
+    disk:
+      name: api-mobility-data
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: NODE_VERSION
         value: 24
@@ -35,7 +39,11 @@ services:
     runtime: node
     region: frankfurt
     buildCommand: npm install
-    startCommand: cd apps/api-realestate && node src/server.js
+    startCommand: cd apps/api-realestate && node src/server.js --db /data/data.db
+    disk:
+      name: api-realestate-data
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: NODE_VERSION
         value: 24
