@@ -1,0 +1,278 @@
+{
+  "seed": 20260310,
+  "snapshot_date": "2026-03-10",
+  "listing_count": 5000,
+  "text_mode": "deterministic",
+  "max_images_per_listing": 3,
+  "calibration": {
+    "amenity_bonus_per_tag": 0.015,
+    "price_noise_min": 0.92,
+    "price_noise_max": 1.08,
+    "new_home_probability": 0.55,
+    "broker_share": 0.78,
+    "property_types": [
+      {
+        "name": "apartment",
+        "urban_weight": 0.58,
+        "suburban_weight": 0.20,
+        "price_multiplier": 1.08,
+        "size_min_urban": 28,
+        "size_max_urban": 118,
+        "size_min_suburban": 28,
+        "size_max_suburban": 94,
+        "bedroom_divisor": 28,
+        "bedroom_offset": 0
+      },
+      {
+        "name": "townhouse",
+        "urban_weight": 0.17,
+        "suburban_weight": 0.16,
+        "price_multiplier": 0.97,
+        "size_min_urban": 72,
+        "size_max_urban": 148,
+        "size_min_suburban": 72,
+        "size_max_suburban": 148,
+        "bedroom_divisor": 28,
+        "bedroom_offset": 1
+      },
+      {
+        "name": "semi_detached",
+        "urban_weight": 0.12,
+        "suburban_weight": 0.18,
+        "price_multiplier": 0.93,
+        "size_min_urban": 88,
+        "size_max_urban": 182,
+        "size_min_suburban": 88,
+        "size_max_suburban": 182,
+        "bedroom_divisor": 28,
+        "bedroom_offset": 1
+      },
+      {
+        "name": "detached",
+        "urban_weight": 0.10,
+        "suburban_weight": 0.34,
+        "price_multiplier": 0.90,
+        "size_min_urban": 98,
+        "size_max_urban": 248,
+        "size_min_suburban": 98,
+        "size_max_suburban": 248,
+        "bedroom_divisor": 28,
+        "bedroom_offset": 1
+      },
+      {
+        "name": "cabin",
+        "urban_weight": 0.03,
+        "suburban_weight": 0.12,
+        "price_multiplier": 0.74,
+        "size_min_urban": 52,
+        "size_max_urban": 164,
+        "size_min_suburban": 52,
+        "size_max_suburban": 164,
+        "bedroom_divisor": 28,
+        "bedroom_offset": 1
+      }
+    ],
+    "conditions": [
+      { "name": "new", "weight": 0.12, "build_year_min": 2022, "build_year_max": 2026 },
+      { "name": "updated", "weight": 0.26, "build_year_min": 1995, "build_year_max": 2022 },
+      { "name": "standard", "weight": 0.48, "build_year_min": 1965, "build_year_max": 2015 },
+      { "name": "renovation_needed", "weight": 0.14, "build_year_min": 1905, "build_year_max": 1988 }
+    ]
+  },
+  "churn": {
+    "timeline_days": 14,
+    "daily_new_rate": 0.03,
+    "daily_update_rate": 0.08,
+    "daily_removed_rate": 0.012,
+    "daily_sold_rate": 0.018,
+    "daily_relist_rate": 0.006,
+    "price_change_probability": 0.35,
+    "price_change_max_fraction": 0.06
+  },
+  "behavior": {
+    "session_count": 180,
+    "min_queries_per_session": 1,
+    "max_queries_per_session": 3,
+    "max_results_per_query": 8,
+    "candidate_pool_size": 24,
+    "click_threshold": 0.48,
+    "save_threshold": 0.7,
+    "contact_threshold": 0.84,
+    "abandonment_threshold": 0.35,
+    "user_segments": [
+      {
+        "name": "first_time_buyers",
+        "weight": 0.15,
+        "preferred_property_types": ["apartment", "townhouse"],
+        "preferred_amenities": ["balcony", "transit_access"],
+        "preferred_counties": ["Oslo", "Vestland", "Trondelag"],
+        "bedroom_target": 2,
+        "budget_min_ratio": 0.75,
+        "budget_max_ratio": 1.02,
+        "exploratory_share": 0.20
+      },
+      {
+        "name": "family_upgraders",
+        "weight": 0.14,
+        "preferred_property_types": ["semi_detached", "detached", "townhouse"],
+        "preferred_amenities": ["garden_access", "parking"],
+        "preferred_counties": ["Rogaland", "Agder", "Vestland"],
+        "bedroom_target": 4,
+        "budget_min_ratio": 0.92,
+        "budget_max_ratio": 1.25,
+        "exploratory_share": 0.12
+      },
+      {
+        "name": "downsizers",
+        "weight": 0.11,
+        "preferred_property_types": ["apartment", "townhouse"],
+        "preferred_amenities": ["elevator", "balcony"],
+        "preferred_counties": ["Oslo", "Rogaland", "Agder"],
+        "bedroom_target": 2,
+        "budget_min_ratio": 0.8,
+        "budget_max_ratio": 1.1,
+        "exploratory_share": 0.16
+      },
+      {
+        "name": "investors",
+        "weight": 0.09,
+        "preferred_property_types": ["apartment", "townhouse"],
+        "preferred_amenities": ["transit_access", "shared_maintenance"],
+        "preferred_counties": ["Oslo", "Vestland", "Trondelag"],
+        "bedroom_target": 1,
+        "budget_min_ratio": 0.7,
+        "budget_max_ratio": 1.08,
+        "exploratory_share": 0.22
+      },
+      {
+        "name": "cabin_buyers",
+        "weight": 0.08,
+        "preferred_property_types": ["cabin"],
+        "preferred_amenities": ["garden_access", "storage_space"],
+        "preferred_counties": ["Nordland", "Trondelag", "Agder"],
+        "bedroom_target": 3,
+        "budget_min_ratio": 0.78,
+        "budget_max_ratio": 1.18,
+        "exploratory_share": 0.24
+      },
+      {
+        "name": "relocation_seekers",
+        "weight": 0.09,
+        "preferred_property_types": ["apartment", "semi_detached", "detached"],
+        "preferred_amenities": ["transit_access", "parking"],
+        "preferred_counties": ["Oslo", "Vestland", "Rogaland"],
+        "bedroom_target": 3,
+        "budget_min_ratio": 0.82,
+        "budget_max_ratio": 1.15,
+        "exploratory_share": 0.28
+      },
+      {
+        "name": "budget_constrained",
+        "weight": 0.12,
+        "preferred_property_types": ["apartment", "townhouse"],
+        "preferred_amenities": ["storage_space", "transit_access"],
+        "preferred_counties": ["Agder", "Nordland", "Trondelag"],
+        "bedroom_target": 2,
+        "budget_min_ratio": 0.6,
+        "budget_max_ratio": 0.92,
+        "exploratory_share": 0.14
+      },
+      {
+        "name": "amenity_seekers",
+        "weight": 0.08,
+        "preferred_property_types": ["apartment", "detached", "townhouse"],
+        "preferred_amenities": ["balcony", "city_view", "parking"],
+        "preferred_counties": ["Oslo", "Rogaland", "Vestland"],
+        "bedroom_target": 3,
+        "budget_min_ratio": 0.85,
+        "budget_max_ratio": 1.2,
+        "exploratory_share": 0.18
+      },
+      {
+        "name": "exact_area_searchers",
+        "weight": 0.07,
+        "preferred_property_types": ["apartment", "semi_detached", "detached"],
+        "preferred_amenities": ["transit_access", "garden_access"],
+        "preferred_counties": ["Oslo", "Vestland", "Agder"],
+        "bedroom_target": 3,
+        "budget_min_ratio": 0.84,
+        "budget_max_ratio": 1.12,
+        "exploratory_share": 0.08
+      },
+      {
+        "name": "exploratory_browsers",
+        "weight": 0.07,
+        "preferred_property_types": ["apartment", "townhouse", "detached", "cabin"],
+        "preferred_amenities": ["balcony", "parking", "storage_space"],
+        "preferred_counties": ["Oslo", "Vestland", "Nordland"],
+        "bedroom_target": 2,
+        "budget_min_ratio": 0.72,
+        "budget_max_ratio": 1.18,
+        "exploratory_share": 0.55
+      }
+    ]
+  },
+  "search": {
+    "embedding_dimensions": 16,
+    "lexical_weight": 0.45,
+    "vector_weight": 0.45,
+    "business_weight": 0.10,
+    "candidate_pool_size": 50,
+    "rerank_depth": 30,
+    "expansion_enabled": true,
+    "max_rewrites": 2,
+    "short_query_token_threshold": 2,
+    "default_page_size": 10
+  },
+  "discovery": {
+    "similar_results": 6,
+    "recommendation_results": 8,
+    "browse_results": 8,
+    "diversity_lambda": 0.15,
+    "behavior_boost_weight": 0.20
+  },
+  "counties": [
+    {
+      "name": "Oslo",
+      "municipalities": ["Oslo"],
+      "weight": 0.22,
+      "price_per_m2": 108000,
+      "urban_share": 0.95
+    },
+    {
+      "name": "Vestland",
+      "municipalities": ["Bergen", "Askoy", "Alver"],
+      "weight": 0.18,
+      "price_per_m2": 72000,
+      "urban_share": 0.72
+    },
+    {
+      "name": "Trondelag",
+      "municipalities": ["Trondheim", "Malvik", "Melhus"],
+      "weight": 0.17,
+      "price_per_m2": 64000,
+      "urban_share": 0.68
+    },
+    {
+      "name": "Rogaland",
+      "municipalities": ["Stavanger", "Sandnes", "Sola"],
+      "weight": 0.19,
+      "price_per_m2": 76000,
+      "urban_share": 0.70
+    },
+    {
+      "name": "Agder",
+      "municipalities": ["Kristiansand", "Lillesand", "Arendal"],
+      "weight": 0.13,
+      "price_per_m2": 59000,
+      "urban_share": 0.58
+    },
+    {
+      "name": "Nordland",
+      "municipalities": ["Bodo", "Narvik", "Sortland"],
+      "weight": 0.11,
+      "price_per_m2": 49000,
+      "urban_share": 0.44
+    }
+  ]
+}

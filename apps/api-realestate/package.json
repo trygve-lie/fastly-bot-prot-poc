@@ -1,10 +1,14 @@
 {
   "name": "api-realestate",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "description": "Node.js port of the re-synthetic real estate prototype",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node src/server.js",
+    "generate": "node src/cli/generate.js",
+    "generate-timeline": "node src/cli/generateTimeline.js",
+    "generate-sessions": "node src/cli/generateSessions.js",
+    "evaluate": "node src/cli/evaluate.js"
   },
   "dependencies": {
     "@hono/node-server": "2.1.1",
