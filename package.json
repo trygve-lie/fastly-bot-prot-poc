@@ -6,6 +6,7 @@
   ],
   "scripts": {
     "dev:frontend": "npm run dev --workspace=apps/frontend",
-    "dev:api-mobility": "npm run dev --workspace=apps/api-mobility"
+    "dev:api-mobility": "npm run dev --workspace=apps/api-mobility",
+    "dev:api-realestate": "npm run dev --workspace=apps/api-realestate"
   }
 }

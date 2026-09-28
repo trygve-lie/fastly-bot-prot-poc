@@ -9,6 +9,9 @@ import {
   accountPage, messagingPage,
 } from './templates/index.js';
 
+const apiMobilityBase   = process.env.API_MOBILITY_URL   ? `http://${process.env.API_MOBILITY_URL}`   : 'http://localhost:3001';
+const apiRealestateBase = process.env.API_REALESTATE_URL ? `http://${process.env.API_REALESTATE_URL}` : 'http://localhost:3002';
+
 const app = new Hono();
 
 app.use(compress());
@@ -222,6 +225,14 @@ ${entries}
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
+
+app.get('/services', async (c) => {
+  const [mobility, realestate] = await Promise.all([
+    fetch(`${apiMobilityBase}/listings`).then(r => r.json()),
+    fetch(`${apiRealestateBase}/listings`).then(r => r.json()),
+  ]);
+  return c.json({ mobility, realestate });
+});
 
 app.get('/', (c) => c.html(pageLayout('Marketplace', homePage, navLinks, {
   description: 'Browse real estate, cars, jobs and second-hand goods on our marketplace.',

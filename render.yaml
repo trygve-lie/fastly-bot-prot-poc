@@ -9,6 +9,16 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 24
+      - key: API_MOBILITY_URL
+        fromService:
+          type: pserv
+          name: api-mobility
+          property: hostport
+      - key: API_REALESTATE_URL
+        fromService:
+          type: pserv
+          name: api-realestate
+          property: hostport
 
   - type: pserv
     name: api-mobility
