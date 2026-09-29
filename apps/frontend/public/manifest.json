@@ -3,6 +3,7 @@
   "short_name": "Marketplace",
   "description": "Browse real estate, cars, jobs and second-hand goods.",
   "start_url": "/",
+  "display_override": ["fullscreen"],
   "display": "fullscreen",
   "orientation": "portrait-primary",
   "theme_color": "#ffffff",
