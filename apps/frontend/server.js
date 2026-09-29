@@ -7,7 +7,7 @@ import {
   pageLayout, subPageLayout,
   homePage, verticalPage, searchPage, itemPage,
   accountPage, messagingPage,
-  intentVerticalPage,
+  intentVerticalPage, apiSearchPage,
   realestateItemPage,
   mobilityItemPage,
 } from './templates/index.js';
@@ -34,6 +34,7 @@ app.use('/public/*', serveStatic({ root: './' }));
 
 // PWA assets served from root scope so the service worker controls the whole origin
 app.get('/manifest.json', serveStatic({ path: './public/manifest.json' }));
+app.use('/sw.js', async (c, next) => { await next(); c.header('Cache-Control', 'no-cache'); });
 app.get('/sw.js',         serveStatic({ path: './public/sw.js' }));
 app.get('/icons/:file',   serveStatic({ root: './public' }));
 
@@ -42,60 +43,6 @@ app.get('/icons/:file',   serveStatic({ root: './public' }));
 // ---------------------------------------------------------------------------
 
 const VERTICALS = {
-  realestate: {
-    name: 'Real Estate', icon: 'house', slug: 'realestate',
-    description: 'Find apartments, houses and properties for sale and rent.',
-    listings: [
-      {
-        id: '1', title: '3-bedroom apartment', location: 'Oslo, Grünerløkka',
-        price: '4 200 000 kr', meta: '85 m² · 3 bed · 2 bath',
-        tags: ['Apartment', 'For sale'],
-        description: 'Bright, well-maintained apartment on the 3rd floor with a south-facing balcony, modern kitchen, and newly renovated bathrooms.',
-        seller: 'Kari Nordmann', memberSince: '2019',
-      },
-      {
-        id: '2', title: 'Terraced house', location: 'Bergen, Sandviken',
-        price: '5 800 000 kr', meta: '120 m² · 4 bed · 2 bath',
-        tags: ['House', 'For sale'],
-        description: 'Spacious terraced house with a private garden, double garage, and panoramic views of the fjord.',
-        seller: 'Ole Berge', memberSince: '2021',
-      },
-      {
-        id: '3', title: 'Studio flat', location: 'Trondheim, Midtbyen',
-        price: '1 900 000 kr', meta: '32 m² · Studio · 1 bath',
-        tags: ['Apartment', 'For sale'],
-        description: 'Compact, well-designed studio in the city centre, ideal for students or first-time buyers. Recently renovated throughout.',
-        seller: 'Sigrid Holm', memberSince: '2022',
-      },
-    ],
-  },
-  mobility: {
-    name: 'Mobility', icon: 'car', slug: 'mobility',
-    description: 'Find new and used cars, vans and motorbikes.',
-    listings: [
-      {
-        id: '4', title: 'Tesla Model 3', location: 'Oslo',
-        price: '389 000 kr', meta: '2022 · 45 000 km · Electric',
-        tags: ['Electric', 'Sedan'],
-        description: 'Long Range AWD in Pearl White. One owner, full service history, autopilot, premium interior. Includes winter wheels.',
-        seller: 'Magnus Lie', memberSince: '2020',
-      },
-      {
-        id: '5', title: 'Volkswagen Golf', location: 'Bergen',
-        price: '249 000 kr', meta: '2020 · 62 000 km · Diesel',
-        tags: ['Diesel', 'Hatchback'],
-        description: 'Golf 8 Comfortline in Urano Grey. Well maintained with full VW service history. Heated seats and DSG automatic.',
-        seller: 'Ingrid Bakke', memberSince: '2018',
-      },
-      {
-        id: '6', title: 'BMW X3 xDrive20d', location: 'Stavanger',
-        price: '499 000 kr', meta: '2021 · 38 000 km · Diesel',
-        tags: ['Diesel', 'SUV'],
-        description: 'xLine package, panoramic roof, HUD, laser lights and 360 camera. Excellent condition with full BMW service history.',
-        seller: 'Per Stavanger', memberSince: '2017',
-      },
-    ],
-  },
   job: {
     name: 'Jobs', icon: 'briefcase', slug: 'job',
     description: 'Find your next job across thousands of listings.',
@@ -231,6 +178,7 @@ ${entries}
 // ---------------------------------------------------------------------------
 
 app.get('/services', async (c) => {
+  c.header('Cache-Control', 'no-store');
   const [mobility, realestate] = await Promise.all([
     fetch(`${apiMobilityBase}/api/search`).then(r => r.json()),
     fetch(`${apiRealestateBase}/api/search`).then(r => r.json()),
@@ -238,12 +186,19 @@ app.get('/services', async (c) => {
   return c.json({ mobility, realestate });
 });
 
-app.get('/', (c) => c.html(pageLayout('Marketplace', homePage, navLinks, {
-  description: 'Browse real estate, cars, jobs and second-hand goods on our marketplace.',
-})));
+app.get('/', (c) => {
+  c.header('Cache-Control', 'public, max-age=60');
+  c.header('Surrogate-Control', 'max-age=3600, stale-while-revalidate=60');
+  return c.html(pageLayout('Marketplace', homePage, navLinks, {
+    description: 'Browse real estate, cars, jobs and second-hand goods on our marketplace.',
+  }));
+});
 
 // Vertical homes
 app.get('/realestate', async (c) => {
+  c.header('Cache-Control', 'public, max-age=30');
+  c.header('Surrogate-Control', 'max-age=60, stale-while-revalidate=10');
+  c.header('Surrogate-Key', 'realestate');
   let intent = '', items = [];
   try {
     const data = await fetch(`${apiRealestateBase}/api/intent?limit=10`).then(r => r.json());
@@ -257,6 +212,9 @@ app.get('/realestate', async (c) => {
 });
 
 app.get('/mobility', async (c) => {
+  c.header('Cache-Control', 'public, max-age=30');
+  c.header('Surrogate-Control', 'max-age=60, stale-while-revalidate=10');
+  c.header('Surrogate-Key', 'mobility');
   let intent = '', items = [];
   try {
     const data = await fetch(`${apiMobilityBase}/api/intent?limit=10`).then(r => r.json());
@@ -269,14 +227,25 @@ app.get('/mobility', async (c) => {
   }), '/', { description: 'Find new and used cars, vans and motorbikes.' }));
 });
 
-// realestate — home is API-driven; item fetches from api-realestate
-app.get('/realestate/search', (c) => {
+// realestate — home is API-driven; search and item fetch from api-realestate
+app.get('/realestate/search', async (c) => {
+  c.header('Cache-Control', 'public, max-age=60');
+  c.header('Surrogate-Control', 'max-age=300, stale-while-revalidate=30');
+  c.header('Surrogate-Key', 'realestate realestate-search');
   const query = c.req.query('q') || '';
-  return c.html(subPageLayout('Search Real Estate', searchPage(VERTICALS.realestate, query), '/realestate', {
-    description: `Search real estate listings${query ? ` for "${query}"` : ''}.`,
-  }));
+  let hits = [];
+  try {
+    const data = await fetch(`${apiRealestateBase}/api/search?q=${encodeURIComponent(query)}`).then(r => r.json());
+    hits = data.hits ?? [];
+  } catch (_) {}
+  return c.html(subPageLayout('Search Real Estate', apiSearchPage({
+    name: 'Real Estate', slug: 'realestate', query, hits, typeKey: 'property_type',
+  }), '/realestate', { description: `Search real estate listings${query ? ` for "${query}"` : ''}.` }));
 });
 app.get('/realestate/item/:id', async (c) => {
+  c.header('Cache-Control', 'public, max-age=60');
+  c.header('Surrogate-Control', 'max-age=600, stale-while-revalidate=60');
+  c.header('Surrogate-Key', `realestate realestate-item-${c.req.param('id')}`);
   const id = c.req.param('id');
   let listing = null;
   try {
@@ -289,14 +258,25 @@ app.get('/realestate/item/:id', async (c) => {
   }));
 });
 
-// mobility — home is API-driven; item fetches from api-mobility
-app.get('/mobility/search', (c) => {
+// mobility — home is API-driven; search and item fetch from api-mobility
+app.get('/mobility/search', async (c) => {
+  c.header('Cache-Control', 'public, max-age=60');
+  c.header('Surrogate-Control', 'max-age=300, stale-while-revalidate=30');
+  c.header('Surrogate-Key', 'mobility mobility-search');
   const query = c.req.query('q') || '';
-  return c.html(subPageLayout('Search Mobility', searchPage(VERTICALS.mobility, query), '/mobility', {
-    description: `Search mobility listings${query ? ` for "${query}"` : ''}.`,
-  }));
+  let hits = [];
+  try {
+    const data = await fetch(`${apiMobilityBase}/api/search?q=${encodeURIComponent(query)}`).then(r => r.json());
+    hits = data.hits ?? [];
+  } catch (_) {}
+  return c.html(subPageLayout('Search Mobility', apiSearchPage({
+    name: 'Mobility', slug: 'mobility', query, hits, typeKey: 'vehicle_type',
+  }), '/mobility', { description: `Search mobility listings${query ? ` for "${query}"` : ''}.` }));
 });
 app.get('/mobility/item/:id', async (c) => {
+  c.header('Cache-Control', 'public, max-age=60');
+  c.header('Surrogate-Control', 'max-age=600, stale-while-revalidate=60');
+  c.header('Surrogate-Key', `mobility mobility-item-${c.req.param('id')}`);
   const id = c.req.param('id');
   let vehicle = null;
   try {
@@ -346,12 +326,18 @@ app.get('/recommerce/item/:id', (c) => {
 });
 
 // User sections
-app.get('/account',   (c) => c.html(subPageLayout('Account',  accountPage,   '/', {
-  description: 'Manage your account, listings and saved searches.',
-})));
-app.get('/messaging', (c) => c.html(subPageLayout('Messages', messagingPage, '/', {
-  description: 'Your messages and conversations with sellers and buyers.',
-})));
+app.get('/account', (c) => {
+  c.header('Cache-Control', 'private, no-store');
+  return c.html(subPageLayout('Account', accountPage, '/', {
+    description: 'Manage your account, listings and saved searches.',
+  }));
+});
+app.get('/messaging', (c) => {
+  c.header('Cache-Control', 'private, no-store');
+  return c.html(subPageLayout('Messages', messagingPage, '/', {
+    description: 'Your messages and conversations with sellers and buyers.',
+  }));
+});
 
 // ---------------------------------------------------------------------------
 

@@ -8,8 +8,8 @@ function formatType(type) {
   return String(type).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-export function intentVerticalPage({ icon, name, slug, intentLabel, items, typeKey }) {
-  const cards = items.map(item => html`
+function itemCards(items, slug, typeKey) {
+  return items.map(item => html`
     <a href="/${slug}/item/${item.listing_id}" class="listing-link">
       <wa-card>
         <div class="wa-split wa-align-items-start">
@@ -26,7 +26,9 @@ export function intentVerticalPage({ icon, name, slug, intentLabel, items, typeK
         </div>
       </wa-card>
     </a>`);
+}
 
+export function intentVerticalPage({ icon, name, slug, intentLabel, items, typeKey }) {
   return html`
     <div class="page-main wa-stack wa-gap-xl">
       <div class="wa-cluster wa-gap-s wa-align-items-center">
@@ -34,17 +36,39 @@ export function intentVerticalPage({ icon, name, slug, intentLabel, items, typeK
         <h1 class="wa-heading-xl">${name}</h1>
       </div>
 
-      <div class="wa-flank:end wa-gap-s">
-        <wa-input placeholder="Search ${name.toLowerCase()}..." clearable>
+      <form action="/${slug}/search" method="get" class="wa-flank:end wa-gap-s">
+        <wa-input name="q" placeholder="Search ${name.toLowerCase()}..." clearable>
           <wa-icon slot="prefix" name="magnifying-glass"></wa-icon>
         </wa-input>
-        <wa-button href="/${slug}/search" variant="brand" appearance="filled">Search</wa-button>
-      </div>
+        <wa-button type="submit" variant="brand" appearance="filled">Search</wa-button>
+      </form>
 
       <section class="wa-stack wa-gap-s">
         <h2 class="wa-heading-m">Suitable for ${intentLabel}</h2>
         <div class="wa-stack wa-gap-s">
-          ${raw(cards.join(''))}
+          ${raw(itemCards(items, slug, typeKey).join(''))}
+        </div>
+      </section>
+    </div>`;
+}
+
+export function apiSearchPage({ name, slug, query, hits, typeKey }) {
+  return html`
+    <div class="page-main wa-stack wa-gap-xl">
+      <div class="wa-stack wa-gap-s">
+        <h1 class="wa-heading-xl">Search ${name}</h1>
+        <form action="/${slug}/search" method="get" class="wa-flank:end wa-gap-s">
+          <wa-input name="q" value="${query || ''}" placeholder="Search ${name.toLowerCase()}..." clearable>
+            <wa-icon slot="prefix" name="magnifying-glass"></wa-icon>
+          </wa-input>
+          <wa-button type="submit" variant="brand" appearance="filled">Search</wa-button>
+        </form>
+      </div>
+
+      <section class="wa-stack wa-gap-s">
+        <p class="wa-body-s">${hits.length} results${query ? ` for "${query}"` : ''}</p>
+        <div class="wa-stack wa-gap-s">
+          ${raw(itemCards(hits, slug, typeKey).join(''))}
         </div>
       </section>
     </div>`;

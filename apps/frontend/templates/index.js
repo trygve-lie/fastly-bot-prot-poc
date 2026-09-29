@@ -3,7 +3,7 @@ export { pageLayout }    from './layouts/page-layout.js';
 export { subPageLayout } from './layouts/sub-page-layout.js';
 
 export { homePage }           from './pages/home.js';
-export { intentVerticalPage }     from './pages/realestate.js';
+export { intentVerticalPage, apiSearchPage } from './pages/realestate.js';
 export { realestateItemPage }     from './pages/realestate-item.js';
 export { mobilityItemPage }       from './pages/mobility-item.js';
 export { verticalPage }  from './pages/vertical.js';
