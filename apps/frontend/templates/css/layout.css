@@ -1,6 +1,36 @@
-html, body { min-height: 100%; padding: 0; margin: 0; background-color: #ffffff; }
+/* ─── Reset & native-app baseline ──────────────────────────────────────── */
+
+html {
+  min-height: 100%;
+  /* Prevent iOS from auto-scaling text on orientation change */
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100%;
+  padding: 0;
+  margin: 0;
+  background-color: #ffffff;
+  /* Sub-pixel font rendering — matches native apps */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent pull-to-refresh on Android Chrome and elastic overscroll on iOS */
+  overscroll-behavior: none;
+}
+
+/* Remove tap flash on every element, not just links */
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+/* ─── Layout ────────────────────────────────────────────────────────────── */
+
 wa-page::part(main-content) { padding: 0; }
+
 main { padding: 5px 5px calc(5px + env(safe-area-inset-bottom)); }
+
 wa-page::part(header) {
   border-block-end: 1px solid var(--wa-color-border-normal);
   padding-top: env(safe-area-inset-top);
@@ -12,12 +42,24 @@ wa-page::part(header) {
   margin-inline: auto;
 }
 
+/* ─── Interactive elements ──────────────────────────────────────────────── */
+
 .category-link,
 .listing-link {
   display: block;
   text-decoration: none;
   color: inherit;
-  -webkit-tap-highlight-color: transparent;
+  /* Eliminate 300ms tap delay — element is tap-only, not pan/zoom */
+  touch-action: manipulation;
+  /* Prevent text selection on tap — native app behaviour */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.category-link wa-card,
+.listing-link wa-card {
+  /* Smooth transition for hover and active feedback */
+  transition: filter 0.15s ease;
 }
 
 /* Hover feedback only on pointer devices that actually support hover */
@@ -33,6 +75,8 @@ wa-page::part(header) {
 .listing-link:active wa-card {
   filter: brightness(0.93);
 }
+
+/* ─── Utilities ─────────────────────────────────────────────────────────── */
 
 /* Used in messaging to let text fill remaining space beside avatar */
 .grow {

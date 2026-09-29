@@ -1,12 +1,21 @@
 {
   "name": "Marketplace",
   "short_name": "Marketplace",
-  "description": "Browse real estate, cars, jobs and second-hand goods.",
-  "start_url": "/",
+  "id": "marketplace",
+  "description": "Browse real estate, cars, jobs and second-hand goods on our marketplace.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#ffffff",
-  "background_color": "#0057b8",
+  "background_color": "#ffffff",
+  "categories": ["shopping", "lifestyle"],
+  "handle_links": "auto",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -18,7 +27,39 @@
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Real Estate",
+      "short_name": "Real Estate",
+      "description": "Browse property listings",
+      "url": "/realestate"
+    },
+    {
+      "name": "Mobility",
+      "short_name": "Mobility",
+      "description": "Browse car and vehicle listings",
+      "url": "/mobility"
+    },
+    {
+      "name": "Jobs",
+      "short_name": "Jobs",
+      "description": "Browse job listings",
+      "url": "/job"
+    },
+    {
+      "name": "Recommerce",
+      "short_name": "Recommerce",
+      "description": "Buy and sell second-hand goods",
+      "url": "/recommerce"
     }
   ]
 }
