@@ -96,6 +96,12 @@ export function createApiRouter(state) {
    * When q is absent: returns a browse feed for the given cluster (default: commuters).
    * When q is present: runs a search and derives recommendations from the top results.
    */
+  /** GET /api/sitemap — all vehicle IDs for sitemap generation. */
+  app.get('/api/sitemap', c => {
+    const ids = state.app.documentRepository.list().map(d => d.listing_id);
+    return c.json({ listing_ids: ids });
+  });
+
   /** GET /api/intent — random intent browse feed; query: limit. */
   app.get('/api/intent', c => {
     const segments = state.config.behavior.user_segments.map(s => s.name);

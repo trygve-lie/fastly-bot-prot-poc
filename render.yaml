@@ -9,6 +9,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 24
+      - key: ORIGIN
+        value: https://typegear.app
       - key: API_MOBILITY_URL
         fromService:
           type: pserv

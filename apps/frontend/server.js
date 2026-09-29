@@ -140,21 +140,52 @@ app.get('/robots.txt', (c) => {
   return c.text(`User-agent: *\nAllow: /\n\nSitemap: ${origin}/sitemap.xml\n`);
 });
 
+// Sitemap index — delegates to one sitemap per category.
+// Google allows up to 50 000 URLs per sitemap file; each child sitemap stays well under that.
 app.get('/sitemap.xml', (c) => {
-  const origin = new URL(c.req.url).origin;
-  const today = new Date().toISOString().slice(0, 10);
+  const origin = publicOrigin(c);
+  const today  = new Date().toISOString().slice(0, 10);
 
-  const urls = [
-    { loc: '/',       priority: '1.0', changefreq: 'daily' },
+  const sitemaps = [
+    `${origin}/sitemap-static.xml`,
+    `${origin}/sitemap-realestate.xml`,
+    `${origin}/sitemap-mobility.xml`,
   ];
 
-  for (const [key, vertical] of Object.entries(VERTICALS)) {
-    urls.push({ loc: `/${key}`,        priority: '0.9', changefreq: 'daily' });
-    urls.push({ loc: `/${key}/search`, priority: '0.8', changefreq: 'daily' });
-    for (const listing of vertical.listings) {
-      urls.push({ loc: `/${key}/item/${listing.id}`, priority: '0.7', changefreq: 'weekly' });
-    }
-  }
+  const entries = sitemaps.map(loc => `  <sitemap>
+    <loc>${loc}</loc>
+    <lastmod>${today}</lastmod>
+  </sitemap>`).join('\n');
+
+  c.header('Content-Type', 'application/xml');
+  c.header('Cache-Control', 'public, max-age=3600');
+  c.header('Surrogate-Control', 'max-age=86400, stale-while-revalidate=3600');
+  c.header('Surrogate-Key', 'sitemap');
+  return c.body(`<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entries}
+</sitemapindex>`);
+});
+
+// Static pages — everything not driven by the API services.
+app.get('/sitemap-static.xml', (c) => {
+  const origin = publicOrigin(c);
+  const today  = new Date().toISOString().slice(0, 10);
+
+  const urls = [
+    { loc: '/',              priority: '1.0', changefreq: 'daily'  },
+    { loc: '/realestate',    priority: '0.9', changefreq: 'hourly' },
+    { loc: '/realestate/search', priority: '0.8', changefreq: 'daily' },
+    { loc: '/mobility',      priority: '0.9', changefreq: 'hourly' },
+    { loc: '/mobility/search',   priority: '0.8', changefreq: 'daily' },
+    { loc: '/job',           priority: '0.9', changefreq: 'daily'  },
+    { loc: '/job/search',    priority: '0.8', changefreq: 'daily'  },
+    { loc: '/recommerce',    priority: '0.9', changefreq: 'daily'  },
+    { loc: '/recommerce/search', priority: '0.8', changefreq: 'daily' },
+    ...Object.values(VERTICALS).flatMap(v =>
+      v.listings.map(l => ({ loc: `/${v.slug}/item/${l.id}`, priority: '0.7', changefreq: 'weekly' }))
+    ),
+  ];
 
   const entries = urls.map(u => `  <url>
     <loc>${origin}${u.loc}</loc>
@@ -163,14 +194,70 @@ app.get('/sitemap.xml', (c) => {
     <priority>${u.priority}</priority>
   </url>`).join('\n');
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+  c.header('Content-Type', 'application/xml');
+  c.header('Cache-Control', 'public, max-age=3600');
+  c.header('Surrogate-Control', 'max-age=86400, stale-while-revalidate=3600');
+  c.header('Surrogate-Key', 'sitemap');
+  return c.body(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${entries}
-</urlset>`;
+</urlset>`);
+});
+
+// Real estate item pages — all listing IDs fetched from api-realestate.
+app.get('/sitemap-realestate.xml', async (c) => {
+  const origin = publicOrigin(c);
+  const today  = new Date().toISOString().slice(0, 10);
+
+  let ids = [];
+  try {
+    const data = await fetch(`${apiRealestateBase}/api/sitemap`).then(r => r.json());
+    ids = data.listing_ids ?? [];
+  } catch (_) {}
+
+  const entries = ids.map(id => `  <url>
+    <loc>${origin}/realestate/item/${id}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`).join('\n');
 
   c.header('Content-Type', 'application/xml');
   c.header('Cache-Control', 'public, max-age=3600');
-  return c.body(xml);
+  c.header('Surrogate-Control', 'max-age=86400, stale-while-revalidate=3600');
+  c.header('Surrogate-Key', 'sitemap realestate');
+  return c.body(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entries}
+</urlset>`);
+});
+
+// Mobility item pages — all vehicle IDs fetched from api-mobility.
+app.get('/sitemap-mobility.xml', async (c) => {
+  const origin = publicOrigin(c);
+  const today  = new Date().toISOString().slice(0, 10);
+
+  let ids = [];
+  try {
+    const data = await fetch(`${apiMobilityBase}/api/sitemap`).then(r => r.json());
+    ids = data.listing_ids ?? [];
+  } catch (_) {}
+
+  const entries = ids.map(id => `  <url>
+    <loc>${origin}/mobility/item/${id}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`).join('\n');
+
+  c.header('Content-Type', 'application/xml');
+  c.header('Cache-Control', 'public, max-age=3600');
+  c.header('Surrogate-Control', 'max-age=86400, stale-while-revalidate=3600');
+  c.header('Surrogate-Key', 'sitemap mobility');
+  return c.body(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entries}
+</urlset>`);
 });
 
 // ---------------------------------------------------------------------------
