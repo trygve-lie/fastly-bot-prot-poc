@@ -1,4 +1,4 @@
-html, body { min-height: 100%; padding: 0; margin: 0; }
+html, body { min-height: 100%; padding: 0; margin: 0; background-color: #ffffff; }
 wa-page::part(main-content) { padding: 0; }
 main { padding: 5px 5px calc(5px + env(safe-area-inset-bottom)); }
 wa-page::part(header) {
