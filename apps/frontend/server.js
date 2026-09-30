@@ -273,10 +273,20 @@ app.get('/services', async (c) => {
   return c.json({ mobility, realestate });
 });
 
-app.get('/', (c) => {
-  c.header('Cache-Control', 'public, max-age=60');
-  c.header('Surrogate-Control', 'max-age=3600, stale-while-revalidate=60');
-  return c.html(pageLayout('Marketplace', homePage, navLinks, {
+app.get('/', async (c) => {
+  c.header('Cache-Control', 'public, max-age=30');
+  c.header('Surrogate-Control', 'max-age=60, stale-while-revalidate=10');
+  const useRealestate = Math.random() < 0.5;
+  const apiBase  = useRealestate ? apiRealestateBase : apiMobilityBase;
+  const slug     = useRealestate ? 'realestate' : 'mobility';
+  const typeKey  = useRealestate ? 'property_type' : 'vehicle_type';
+  let intent = '', items = [];
+  try {
+    const data = await fetch(`${apiBase}/api/intent?limit=10`).then(r => r.json());
+    intent = data.intent ?? '';
+    items  = data.hits  ?? [];
+  } catch (_) {}
+  return c.html(pageLayout('Marketplace', homePage({ intentLabel: intent, items, slug, typeKey }), navLinks, {
     description: 'Browse real estate, cars, jobs and second-hand goods on our marketplace.',
   }));
 });
