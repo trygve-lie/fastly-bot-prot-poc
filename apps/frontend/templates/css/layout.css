@@ -40,6 +40,14 @@ wa-page::part(header) {
   padding: var(--wa-space-m);
   max-width: 48rem;
   margin-inline: auto;
+  /* Promote scroll container to its own GPU layer for smoother iOS scrolling */
+  will-change: scroll-position;
+}
+
+/* Skip rendering off-screen list items — biggest win on long search/intent pages */
+.listing-link {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 80px;
 }
 
 /* ─── Interactive elements ──────────────────────────────────────────────── */
@@ -56,21 +64,19 @@ wa-page::part(header) {
   -webkit-user-select: none;
 }
 
-.category-link wa-card,
-.listing-link wa-card {
-  /* Smooth transition for hover and active feedback */
-  transition: filter 0.15s ease;
-}
-
-/* Hover feedback only on pointer devices that actually support hover */
+/* Hover feedback and smooth transition only on true hover devices (not touch/iOS) */
 @media (hover: hover) {
+  .category-link wa-card,
+  .listing-link wa-card {
+    transition: filter 0.15s ease;
+  }
   .category-link:hover wa-card,
   .listing-link:hover wa-card {
     filter: brightness(0.97);
   }
 }
 
-/* Active/tap feedback on all devices */
+/* Active/tap feedback on all devices — instant, no transition */
 .category-link:active wa-card,
 .listing-link:active wa-card {
   filter: brightness(0.93);
