@@ -8,8 +8,26 @@ function formatType(s) {
   return String(s).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-export function mobilityItemPage(vehicle) {
+export function mobilityItemPage(vehicle, similar = []) {
   const tags = (vehicle.feature_tags ?? []).map(t => `<wa-tag size="s">${formatType(t)}</wa-tag>`).join('');
+
+  const similarCards = similar.map(item => `
+    <a href="/mobility/item/${item.listing_id}" class="listing-link">
+      <wa-card>
+        <div class="wa-split wa-align-items-start">
+          <div class="wa-stack wa-gap-2xs">
+            <span class="wa-heading-s">${item.title}</span>
+            <span class="wa-body-s">${item.municipality}, ${item.county}</span>
+            <div class="wa-cluster wa-gap-2xs">
+              <wa-tag size="s">${formatType(item.vehicle_type)}</wa-tag>
+            </div>
+          </div>
+          <div class="wa-stack wa-gap-2xs wa-align-items-end">
+            <span class="wa-heading-s">${formatPrice(item.total_price)}</span>
+          </div>
+        </div>
+      </wa-card>
+    </a>`).join('');
 
   return html`
     <div class="page-main wa-stack wa-gap-xl">
@@ -63,5 +81,11 @@ export function mobilityItemPage(vehicle) {
           <div class="wa-cluster wa-gap-2xs">${raw(tags)}</div>
         </div>
       </wa-card>` : ''}
+
+      ${similarCards.length ? html`
+      <section class="wa-stack wa-gap-s">
+        <h2 class="wa-heading-m">Similar vehicles</h2>
+        <div class="wa-stack wa-gap-s">${raw(similarCards)}</div>
+      </section>` : ''}
     </div>`;
 }

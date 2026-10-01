@@ -344,13 +344,17 @@ app.get('/realestate/item/:id', async (c) => {
   c.header('Surrogate-Control', 'max-age=600, stale-while-revalidate=60');
   c.header('Surrogate-Key', `realestate realestate-item-${c.req.param('id')}`);
   const id = c.req.param('id');
-  let listing = null;
+  let listing = null, similar = [];
   try {
-    const res = await fetch(`${apiRealestateBase}/api/listings/${encodeURIComponent(id)}`);
-    if (res.ok) listing = await res.json();
+    const [itemRes, simRes] = await Promise.all([
+      fetch(`${apiRealestateBase}/api/listings/${encodeURIComponent(id)}`),
+      fetch(`${apiRealestateBase}/api/listings/${encodeURIComponent(id)}/similar?limit=5`),
+    ]);
+    if (itemRes.ok) listing = await itemRes.json();
+    if (simRes.ok) similar = (await simRes.json()).hits ?? [];
   } catch (_) {}
   if (!listing) return c.notFound();
-  return c.html(subPageLayout(listing.title, realestateItemPage(listing), '/realestate/search', {
+  return c.html(subPageLayout(listing.title, realestateItemPage(listing, similar), '/realestate/search', {
     description: listing.text,
   }));
 });
@@ -375,13 +379,17 @@ app.get('/mobility/item/:id', async (c) => {
   c.header('Surrogate-Control', 'max-age=600, stale-while-revalidate=60');
   c.header('Surrogate-Key', `mobility mobility-item-${c.req.param('id')}`);
   const id = c.req.param('id');
-  let vehicle = null;
+  let vehicle = null, similar = [];
   try {
-    const res = await fetch(`${apiMobilityBase}/api/vehicles/${encodeURIComponent(id)}`);
-    if (res.ok) vehicle = await res.json();
+    const [itemRes, simRes] = await Promise.all([
+      fetch(`${apiMobilityBase}/api/vehicles/${encodeURIComponent(id)}`),
+      fetch(`${apiMobilityBase}/api/vehicles/${encodeURIComponent(id)}/similar?limit=5`),
+    ]);
+    if (itemRes.ok) vehicle = await itemRes.json();
+    if (simRes.ok) similar = (await simRes.json()).hits ?? [];
   } catch (_) {}
   if (!vehicle) return c.notFound();
-  return c.html(subPageLayout(vehicle.title, mobilityItemPage(vehicle), '/mobility/search', {
+  return c.html(subPageLayout(vehicle.title, mobilityItemPage(vehicle, similar), '/mobility/search', {
     description: vehicle.text,
   }));
 });
