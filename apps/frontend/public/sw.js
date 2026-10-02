@@ -41,8 +41,8 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // All other requests (navigations, API calls, manifest, etc.): pass through to network.
-  // Navigations are intentionally not intercepted — the SW must not add latency
-  // to page loads since that can exceed Chrome's view transition tolerance on mobile.
-  e.respondWith(fetch(request));
+  // All other requests (navigations, API calls, manifest, etc.): do NOT call
+  // e.respondWith() — let the browser handle them natively with no SW involvement.
+  // Calling e.respondWith(fetch(request)) would still route responses through the
+  // SW event loop and interfere with Chrome's view transition viewport tracking.
 });
