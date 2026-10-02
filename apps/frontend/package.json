@@ -4,10 +4,16 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "build:js": "node build.js --js",
+    "build:css": "node build.js --css",
+    "build": "npm run build:js && npm run build:css"
   },
   "dependencies": {
     "@hono/node-server": "2.1.1",
     "hono": "4.13.9"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
   }
 }

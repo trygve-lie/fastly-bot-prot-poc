@@ -13,6 +13,7 @@ export function document(title, body, opts = {}) {
   const {
     waBasePath = '/public/awesome/3.13.0',
     clientScriptPath = '/public/client.js',
+    stylesPath = null,   // set in production to the hashed built CSS file
     description = '',
   } = opts;
 
@@ -37,6 +38,7 @@ export function document(title, body, opts = {}) {
     <link rel="preload" href="${waBasePath}/styles/themes/default.css" as="style" />
     <link rel="preload" href="${waBasePath}/styles/utilities.css" as="style" />
     <link rel="preload" href="${waBasePath}/styles/native.css" as="style" />
+    ${stylesPath ? html`<link rel="preload" href="${stylesPath}" as="style" />` : ''}
     <link rel="stylesheet" href="${waBasePath}/styles/themes/default.css" />
     <link rel="stylesheet" href="${waBasePath}/styles/utilities.css" />
     <link rel="stylesheet" href="${waBasePath}/styles/native.css" />
@@ -65,7 +67,9 @@ export function document(title, body, opts = {}) {
         });
       })();
     </script>
-    <style>${inlineStyles}</style>
+    ${stylesPath
+      ? html`<link rel="stylesheet" href="${stylesPath}" />`
+      : html`<style>${inlineStyles}</style>`}
   </head>
   <body>
     ${body}

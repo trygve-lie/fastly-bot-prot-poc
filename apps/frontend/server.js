@@ -3,6 +3,10 @@ import { compress } from 'hono/compress';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { html } from 'hono/html';
+import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join as pathJoin } from 'node:path';
+const __serverDir = dirname(fileURLToPath(import.meta.url));
 import {
   pageLayout, subPageLayout,
   homePage, verticalPage, searchPage, itemPage,
@@ -12,6 +16,48 @@ import {
   mobilityItemPage,
 } from './templates/index.js';
 
+// ---------------------------------------------------------------------------
+// Built asset paths — resolved at startup from esbuild manifests.
+// In development the manifests don't exist and source files are used instead.
+// ---------------------------------------------------------------------------
+
+function resolveBuiltAssets() {
+  try {
+    const jsManifest  = JSON.parse(readFileSync(pathJoin(__serverDir, 'public/dist/manifest-js.json'),  'utf8'));
+    const cssManifest = JSON.parse(readFileSync(pathJoin(__serverDir, 'public/dist/manifest-css.json'), 'utf8'));
+
+    const clientEntry = Object.keys(jsManifest.outputs)
+      .find(k => /client\.[A-Z0-9]+\.js$/.test(k));
+    const stylesEntry = Object.keys(cssManifest.outputs)
+      .find(k => /styles\.[A-Z0-9]+\.css$/.test(k));
+
+    return {
+      clientScriptPath: clientEntry ? `/${clientEntry}` : '/public/client.js',
+      stylesPath:       stylesEntry ? `/${stylesEntry}` : null,
+      swBuilt: existsSync(pathJoin(__serverDir, 'public/dist/sw.js')),
+    };
+  } catch {
+    return { clientScriptPath: '/public/client.js', stylesPath: null, swBuilt: false };
+  }
+}
+
+const builtAssets = resolveBuiltAssets();
+
+// Spread into every opts object so document() picks up the right asset paths.
+const assetOpts = {
+  clientScriptPath: builtAssets.clientScriptPath,
+  ...(builtAssets.stylesPath ? { stylesPath: builtAssets.stylesPath } : {}),
+};
+
+if (builtAssets.stylesPath) {
+  console.log('Production assets:', builtAssets.clientScriptPath, builtAssets.stylesPath);
+} else {
+  console.log('Development mode: serving unbuilt assets');
+}
+
+// Wrappers so every page automatically inherits the correct built asset paths.
+const page    = (title, body, nav, extra = {}) => pageLayout(title, body, nav, { ...assetOpts, ...extra });
+const subPage = (title, body, back, extra = {}) => subPageLayout(title, body, back, { ...assetOpts, ...extra });
 
 const apiMobilityBase   = process.env.API_MOBILITY_URL   ? `http://${process.env.API_MOBILITY_URL}`   : 'http://localhost:3001';
 const apiRealestateBase = process.env.API_REALESTATE_URL ? `http://${process.env.API_REALESTATE_URL}` : 'http://localhost:3002';
@@ -22,9 +68,10 @@ app.use(compress());
 
 app.use('/public/*', async (c, next) => {
   await next();
-  // Only WA assets are truly immutable (version is in the path).
-  // client.js changes with every deployment so must not be cached immutably.
-  if (c.req.path.startsWith('/public/awesome/')) {
+  const path = c.req.path;
+  if (path.startsWith('/public/awesome/') || path.startsWith('/public/dist/')) {
+    // Immutable: WA assets (versioned in path) and built app assets (content-hashed).
+    // New content always gets a new URL — no explicit CDN purge needed.
     c.header('Cache-Control', 'public, max-age=31536000, immutable');
   } else {
     c.header('Cache-Control', 'no-cache');
@@ -35,7 +82,8 @@ app.use('/public/*', serveStatic({ root: './' }));
 // PWA assets served from root scope so the service worker controls the whole origin
 app.get('/manifest.json', serveStatic({ path: './public/manifest.json' }));
 app.use('/sw.js', async (c, next) => { await next(); c.header('Cache-Control', 'no-cache'); });
-app.get('/sw.js',         serveStatic({ path: './public/sw.js' }));
+// In production serve the minified SW from public/dist/; in dev serve the source directly.
+app.get('/sw.js', serveStatic({ path: builtAssets.swBuilt ? 'public/dist/sw.js' : 'public/sw.js', root: __serverDir }));
 app.get('/icons/:file',   serveStatic({ root: './public' }));
 
 // ---------------------------------------------------------------------------
@@ -286,7 +334,7 @@ app.get('/', async (c) => {
     intent = data.intent ?? '';
     items  = data.hits  ?? [];
   } catch (_) {}
-  return c.html(pageLayout('Marketplace', homePage({ intentLabel: intent, items, slug, typeKey }), navLinks, {
+  return c.html(page('Marketplace', homePage({ intentLabel: intent, items, slug, typeKey }), navLinks, {
     description: 'Browse real estate, cars, jobs and second-hand goods on our marketplace.',
   }));
 });
@@ -333,7 +381,7 @@ app.get('/realestate', async (c) => {
     intent = data.intent ?? '';
     items = data.hits ?? [];
   } catch (_) {}
-  return c.html(subPageLayout('Real Estate', intentVerticalPage({
+  return c.html(subPage('Real Estate', intentVerticalPage({
     icon: 'house', name: 'Real Estate', slug: 'realestate',
     intentLabel: intent, items, typeKey: 'property_type', filters,
   }), '/', { description: 'Find apartments, houses and properties for sale and rent.' }));
@@ -350,7 +398,7 @@ app.get('/mobility', async (c) => {
     intent = data.intent ?? '';
     items = data.hits ?? [];
   } catch (_) {}
-  return c.html(subPageLayout('Mobility', intentVerticalPage({
+  return c.html(subPage('Mobility', intentVerticalPage({
     icon: 'car', name: 'Mobility', slug: 'mobility',
     intentLabel: intent, items, typeKey: 'vehicle_type', filters,
   }), '/', { description: 'Find new and used cars, vans and motorbikes.' }));
@@ -367,7 +415,7 @@ app.get('/realestate/search', async (c) => {
     const data = await fetch(buildSearchUrl(apiRealestateBase, filters)).then(r => r.json());
     hits = data.hits ?? [];
   } catch (_) {}
-  return c.html(subPageLayout('Search Real Estate', apiSearchPage({
+  return c.html(subPage('Search Real Estate', apiSearchPage({
     name: 'Real Estate', slug: 'realestate', hits, typeKey: 'property_type', filters,
   }), '/realestate', { description: `Search real estate listings${filters.q ? ` for "${filters.q}"` : ''}.` }));
 });
@@ -386,7 +434,7 @@ app.get('/realestate/item/:id', async (c) => {
     if (simRes.ok) similar = (await simRes.json()).hits ?? [];
   } catch (_) {}
   if (!listing) return c.notFound();
-  return c.html(subPageLayout(listing.title, realestateItemPage(listing, similar), '/realestate/search', {
+  return c.html(subPage(listing.title, realestateItemPage(listing, similar), '/realestate/search', {
     description: listing.text,
   }));
 });
@@ -402,7 +450,7 @@ app.get('/mobility/search', async (c) => {
     const data = await fetch(buildSearchUrl(apiMobilityBase, filters)).then(r => r.json());
     hits = data.hits ?? [];
   } catch (_) {}
-  return c.html(subPageLayout('Search Mobility', apiSearchPage({
+  return c.html(subPage('Search Mobility', apiSearchPage({
     name: 'Mobility', slug: 'mobility', hits, typeKey: 'vehicle_type', filters,
   }), '/mobility', { description: `Search mobility listings${filters.q ? ` for "${filters.q}"` : ''}.` }));
 });
@@ -421,43 +469,43 @@ app.get('/mobility/item/:id', async (c) => {
     if (simRes.ok) similar = (await simRes.json()).hits ?? [];
   } catch (_) {}
   if (!vehicle) return c.notFound();
-  return c.html(subPageLayout(vehicle.title, mobilityItemPage(vehicle, similar), '/mobility/search', {
+  return c.html(subPage(vehicle.title, mobilityItemPage(vehicle, similar), '/mobility/search', {
     description: vehicle.text,
   }));
 });
 
 // job
-app.get('/job', (c) => c.html(subPageLayout(VERTICALS.job.name, verticalPage(VERTICALS.job), '/', {
+app.get('/job', (c) => c.html(subPage(VERTICALS.job.name, verticalPage(VERTICALS.job), '/', {
   description: VERTICALS.job.description,
 })));
 app.get('/job/search', (c) => {
   const query = c.req.query('q') || '';
-  return c.html(subPageLayout(`Search ${VERTICALS.job.name}`, searchPage(VERTICALS.job, query), '/job', {
+  return c.html(subPage(`Search ${VERTICALS.job.name}`, searchPage(VERTICALS.job, query), '/job', {
     description: `Search job listings${query ? ` for "${query}"` : ''}.`,
   }));
 });
 app.get('/job/item/:id', (c) => {
   const entry = ALL_LISTINGS[c.req.param('id')];
   if (!entry || entry.vertical.slug !== 'job') return c.notFound();
-  return c.html(subPageLayout(entry.listing.title, itemPage(entry.vertical, entry.listing), '/job/search', {
+  return c.html(subPage(entry.listing.title, itemPage(entry.vertical, entry.listing), '/job/search', {
     description: entry.listing.description,
   }));
 });
 
 // recommerce
-app.get('/recommerce', (c) => c.html(subPageLayout(VERTICALS.recommerce.name, verticalPage(VERTICALS.recommerce), '/', {
+app.get('/recommerce', (c) => c.html(subPage(VERTICALS.recommerce.name, verticalPage(VERTICALS.recommerce), '/', {
   description: VERTICALS.recommerce.description,
 })));
 app.get('/recommerce/search', (c) => {
   const query = c.req.query('q') || '';
-  return c.html(subPageLayout(`Search ${VERTICALS.recommerce.name}`, searchPage(VERTICALS.recommerce, query), '/recommerce', {
+  return c.html(subPage(`Search ${VERTICALS.recommerce.name}`, searchPage(VERTICALS.recommerce, query), '/recommerce', {
     description: `Search recommerce listings${query ? ` for "${query}"` : ''}.`,
   }));
 });
 app.get('/recommerce/item/:id', (c) => {
   const entry = ALL_LISTINGS[c.req.param('id')];
   if (!entry || entry.vertical.slug !== 'recommerce') return c.notFound();
-  return c.html(subPageLayout(entry.listing.title, itemPage(entry.vertical, entry.listing), '/recommerce/search', {
+  return c.html(subPage(entry.listing.title, itemPage(entry.vertical, entry.listing), '/recommerce/search', {
     description: entry.listing.description,
   }));
 });
@@ -465,13 +513,13 @@ app.get('/recommerce/item/:id', (c) => {
 // User sections
 app.get('/account', (c) => {
   c.header('Cache-Control', 'private, no-store');
-  return c.html(subPageLayout('Account', accountPage, '/', {
+  return c.html(subPage('Account', accountPage, '/', {
     description: 'Manage your account, listings and saved searches.',
   }));
 });
 app.get('/messaging', (c) => {
   c.header('Cache-Control', 'private, no-store');
-  return c.html(subPageLayout('Messages', messagingPage, '/', {
+  return c.html(subPage('Messages', messagingPage, '/', {
     description: 'Your messages and conversations with sellers and buyers.',
   }));
 });

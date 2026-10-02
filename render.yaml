@@ -3,7 +3,7 @@ services:
     name: frontend
     runtime: node
     region: frankfurt
-    buildCommand: npm install
+    buildCommand: npm install && cd apps/frontend && node build.js --js && node build.js --css
     startCommand: cd apps/frontend && node server.js
     healthCheckPath: /
     envVars:
