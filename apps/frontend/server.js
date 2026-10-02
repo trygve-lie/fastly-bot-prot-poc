@@ -31,9 +31,15 @@ function resolveBuiltAssets() {
     const stylesEntry = Object.keys(cssManifest.outputs)
       .find(k => /styles\.[A-Z0-9]+\.css$/.test(k));
 
+    // Read the minified CSS content to inline it — no external CSS file is ever
+    // linked so render-blocking never delays cross-document view transitions.
+    const minifiedCss = stylesEntry
+      ? readFileSync(pathJoin(__serverDir, stylesEntry), 'utf8')
+      : null;
+
     return {
       clientScriptPath: clientEntry ? `/${clientEntry}` : '/public/client.js',
-      stylesPath:       stylesEntry ? `/${stylesEntry}` : null,
+      minifiedCss,
       swBuilt: existsSync(pathJoin(__serverDir, 'public/dist/sw.js')),
     };
   } catch {
@@ -46,11 +52,11 @@ const builtAssets = resolveBuiltAssets();
 // Spread into every opts object so document() picks up the right asset paths.
 const assetOpts = {
   clientScriptPath: builtAssets.clientScriptPath,
-  ...(builtAssets.stylesPath ? { stylesPath: builtAssets.stylesPath } : {}),
+  ...(builtAssets.minifiedCss ? { minifiedCss: builtAssets.minifiedCss } : {}),
 };
 
-if (builtAssets.stylesPath) {
-  console.log('Production assets:', builtAssets.clientScriptPath, builtAssets.stylesPath);
+if (builtAssets.minifiedCss) {
+  console.log('Production assets:', builtAssets.clientScriptPath, `(${builtAssets.minifiedCss.length}B minified CSS inlined)`);
 } else {
   console.log('Development mode: serving unbuilt assets');
 }
