@@ -15,6 +15,8 @@ function buildApiSearchPayload(p) {
   if (propertyType) filters.push({ field: 'property_type', operator: 'eq', value: propertyType });
   const maxPrice = p.get('max_price');
   if (maxPrice) filters.push({ field: 'total_price', operator: 'lte', value: parseInt(maxPrice) });
+  const minBedrooms = p.get('min_bedrooms');
+  if (minBedrooms) filters.push({ field: 'bedrooms', operator: 'gte', value: parseInt(minBedrooms) });
   return {
     query_text: p.get('q') || '',
     filters,

@@ -13,6 +13,8 @@ function buildApiSearchPayload(p) {
   else if (counties.length > 1) filters.push({ field: 'county', operator: 'in', value: counties });
   const vehicleType = p.get('vehicle_type');
   if (vehicleType) filters.push({ field: 'vehicle_type', operator: 'eq', value: vehicleType });
+  const fuelType = p.get('fuel_type');
+  if (fuelType) filters.push({ field: 'fuel_type', operator: 'eq', value: fuelType });
   const maxPrice = p.get('max_price');
   if (maxPrice) filters.push({ field: 'total_price', operator: 'lte', value: parseInt(maxPrice) });
   const maxMileage = p.get('max_mileage');

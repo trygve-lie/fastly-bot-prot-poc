@@ -76,6 +76,14 @@ wa-page::part(header) {
   filter: brightness(0.93);
 }
 
+/* Filter row — wrapping flex used in search forms */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--wa-space-s);
+  align-items: flex-end;
+}
+
 /* ─── Utilities ─────────────────────────────────────────────────────────── */
 
 /* Used in messaging to let text fill remaining space beside avatar */

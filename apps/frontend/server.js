@@ -291,11 +291,42 @@ app.get('/', async (c) => {
   }));
 });
 
+// Helper: read all realestate filter params from request
+function realestateFilters(c) {
+  return {
+    q:             c.req.query('q')             || '',
+    county:        c.req.query('county')        || '',
+    property_type: c.req.query('property_type') || '',
+    min_bedrooms:  c.req.query('min_bedrooms')  || '',
+    max_price:     c.req.query('max_price')     || '',
+  };
+}
+
+// Helper: read all mobility filter params from request
+function mobilityFilters(c) {
+  return {
+    q:            c.req.query('q')            || '',
+    county:       c.req.query('county')       || '',
+    vehicle_type: c.req.query('vehicle_type') || '',
+    fuel_type:    c.req.query('fuel_type')    || '',
+    max_price:    c.req.query('max_price')    || '',
+    max_mileage:  c.req.query('max_mileage')  || '',
+  };
+}
+
+// Helper: build an API search URL forwarding all active filter params
+function buildSearchUrl(base, filters) {
+  const url = new URL(`${base}/api/search`);
+  Object.entries(filters).forEach(([k, v]) => { if (v) url.searchParams.set(k, v); });
+  return url.toString();
+}
+
 // Vertical homes
 app.get('/realestate', async (c) => {
   c.header('Cache-Control', 'public, max-age=30');
   c.header('Surrogate-Control', 'max-age=60, stale-while-revalidate=10');
   c.header('Surrogate-Key', 'realestate');
+  const filters = realestateFilters(c);
   let intent = '', items = [];
   try {
     const data = await fetch(`${apiRealestateBase}/api/intent?limit=10`).then(r => r.json());
@@ -304,7 +335,7 @@ app.get('/realestate', async (c) => {
   } catch (_) {}
   return c.html(subPageLayout('Real Estate', intentVerticalPage({
     icon: 'house', name: 'Real Estate', slug: 'realestate',
-    intentLabel: intent, items, typeKey: 'property_type',
+    intentLabel: intent, items, typeKey: 'property_type', filters,
   }), '/', { description: 'Find apartments, houses and properties for sale and rent.' }));
 });
 
@@ -312,6 +343,7 @@ app.get('/mobility', async (c) => {
   c.header('Cache-Control', 'public, max-age=30');
   c.header('Surrogate-Control', 'max-age=60, stale-while-revalidate=10');
   c.header('Surrogate-Key', 'mobility');
+  const filters = mobilityFilters(c);
   let intent = '', items = [];
   try {
     const data = await fetch(`${apiMobilityBase}/api/intent?limit=10`).then(r => r.json());
@@ -320,7 +352,7 @@ app.get('/mobility', async (c) => {
   } catch (_) {}
   return c.html(subPageLayout('Mobility', intentVerticalPage({
     icon: 'car', name: 'Mobility', slug: 'mobility',
-    intentLabel: intent, items, typeKey: 'vehicle_type',
+    intentLabel: intent, items, typeKey: 'vehicle_type', filters,
   }), '/', { description: 'Find new and used cars, vans and motorbikes.' }));
 });
 
@@ -329,15 +361,15 @@ app.get('/realestate/search', async (c) => {
   c.header('Cache-Control', 'public, max-age=60');
   c.header('Surrogate-Control', 'max-age=300, stale-while-revalidate=30');
   c.header('Surrogate-Key', 'realestate realestate-search');
-  const query = c.req.query('q') || '';
+  const filters = realestateFilters(c);
   let hits = [];
   try {
-    const data = await fetch(`${apiRealestateBase}/api/search?q=${encodeURIComponent(query)}`).then(r => r.json());
+    const data = await fetch(buildSearchUrl(apiRealestateBase, filters)).then(r => r.json());
     hits = data.hits ?? [];
   } catch (_) {}
   return c.html(subPageLayout('Search Real Estate', apiSearchPage({
-    name: 'Real Estate', slug: 'realestate', query, hits, typeKey: 'property_type',
-  }), '/realestate', { description: `Search real estate listings${query ? ` for "${query}"` : ''}.` }));
+    name: 'Real Estate', slug: 'realestate', hits, typeKey: 'property_type', filters,
+  }), '/realestate', { description: `Search real estate listings${filters.q ? ` for "${filters.q}"` : ''}.` }));
 });
 app.get('/realestate/item/:id', async (c) => {
   c.header('Cache-Control', 'public, max-age=60');
@@ -364,15 +396,15 @@ app.get('/mobility/search', async (c) => {
   c.header('Cache-Control', 'public, max-age=60');
   c.header('Surrogate-Control', 'max-age=300, stale-while-revalidate=30');
   c.header('Surrogate-Key', 'mobility mobility-search');
-  const query = c.req.query('q') || '';
+  const filters = mobilityFilters(c);
   let hits = [];
   try {
-    const data = await fetch(`${apiMobilityBase}/api/search?q=${encodeURIComponent(query)}`).then(r => r.json());
+    const data = await fetch(buildSearchUrl(apiMobilityBase, filters)).then(r => r.json());
     hits = data.hits ?? [];
   } catch (_) {}
   return c.html(subPageLayout('Search Mobility', apiSearchPage({
-    name: 'Mobility', slug: 'mobility', query, hits, typeKey: 'vehicle_type',
-  }), '/mobility', { description: `Search mobility listings${query ? ` for "${query}"` : ''}.` }));
+    name: 'Mobility', slug: 'mobility', hits, typeKey: 'vehicle_type', filters,
+  }), '/mobility', { description: `Search mobility listings${filters.q ? ` for "${filters.q}"` : ''}.` }));
 });
 app.get('/mobility/item/:id', async (c) => {
   c.header('Cache-Control', 'public, max-age=60');
