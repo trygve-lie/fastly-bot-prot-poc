@@ -34,9 +34,9 @@ export function document(title, body, opts = {}) {
     ${description ? html`<meta name="description" content="${description}" />` : ''}
     <title>${title}</title>
     <script type="module" src="${waBasePath}/webawesome.loader.js"></script>
-    <link rel="prefetch" href="${waBasePath}/styles/themes/default.css" as="style" />
-    <link rel="prefetch" href="${waBasePath}/styles/utilities.css" as="style" />
-    <link rel="prefetch" href="${waBasePath}/styles/native.css" as="style" />
+    <link rel="preload" href="${waBasePath}/styles/themes/default.css" as="style" />
+    <link rel="preload" href="${waBasePath}/styles/utilities.css" as="style" />
+    <link rel="preload" href="${waBasePath}/styles/native.css" as="style" />
     <link rel="stylesheet" href="${waBasePath}/styles/themes/default.css" />
     <link rel="stylesheet" href="${waBasePath}/styles/utilities.css" />
     <link rel="stylesheet" href="${waBasePath}/styles/native.css" />
