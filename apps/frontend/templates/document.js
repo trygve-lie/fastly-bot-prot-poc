@@ -4,10 +4,13 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const inlineStyles = raw(
-  readFileSync(join(__dirname, './css/layout.css'), 'utf8') +
-  readFileSync(join(__dirname, './css/transitions.css'), 'utf8')
-);
+// transitions.css is always inlined — @view-transition { navigation: auto }
+// must be parsed before Chrome decides whether to run a cross-document
+// view transition, so it must never live behind an external stylesheet load.
+const inlineTransitions = raw(readFileSync(join(__dirname, './css/transitions.css'), 'utf8'));
+
+// layout.css is inlined in dev, served as an external file in production.
+const inlineLayout = raw(readFileSync(join(__dirname, './css/layout.css'), 'utf8'));
 
 export function document(title, body, opts = {}) {
   const {
@@ -67,9 +70,10 @@ export function document(title, body, opts = {}) {
         });
       })();
     </script>
+    <style>${inlineTransitions}</style>
     ${stylesPath
       ? html`<link rel="stylesheet" href="${stylesPath}" />`
-      : html`<style>${inlineStyles}</style>`}
+      : html`<style>${inlineLayout}</style>`}
   </head>
   <body>
     ${body}

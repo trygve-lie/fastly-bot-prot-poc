@@ -17,10 +17,16 @@ function isImmutableAsset(url) {
 self.addEventListener('install', () => self.skipWaiting());
 
 self.addEventListener('activate', (e) => {
-  // Clear the asset cache on every new SW activation. This ensures that a
-  // fresh deployment (including a WebAwesome version bump) always re-fetches
-  // current assets on first access. The cache is rebuilt on demand from there.
-  e.waitUntil(caches.delete(CACHE_NAME).then(() => clients.claim()));
+  e.waitUntil(
+    Promise.all([
+      // Clear asset cache on every new SW activation so fresh deploys
+      // (including WebAwesome version bumps) always fetch current assets.
+      caches.delete(CACHE_NAME),
+      // Navigation Preload: Chrome starts the navigation network request in
+      // parallel with SW startup, eliminating cold-start latency on navigations.
+      self.registration.navigationPreload?.enable(),
+    ]).then(() => clients.claim())
+  );
 });
 
 self.addEventListener('fetch', (e) => {
@@ -28,8 +34,6 @@ self.addEventListener('fetch', (e) => {
 
   if (isImmutableAsset(request.url)) {
     // Cache-first: versioned immutable assets (WebAwesome CSS/JS, icons).
-    // A cache hit returns instantly; a miss fetches from the network and
-    // populates the cache for all subsequent requests.
     e.respondWith(
       caches.open(CACHE_NAME).then(async cache => {
         const cached = await cache.match(request);
@@ -43,18 +47,23 @@ self.addEventListener('fetch', (e) => {
   }
 
   if (request.mode === 'navigate') {
-    // Network-first for page navigations: always try the network so users
-    // see fresh content. Cache the response as an offline fallback.
+    // Network-first for page navigations. Uses the Navigation Preload response
+    // when available (already in flight during SW startup) to avoid a redundant
+    // second network request. Falls back to a fresh fetch, then to cache offline.
     e.respondWith(
-      fetch(request)
-        .then(response => {
-          if (response.ok) {
+      (async () => {
+        try {
+          const preload = await e.preloadResponse;
+          const response = preload ?? await fetch(request);
+          if (response?.ok) {
             caches.open(CACHE_NAME)
               .then(cache => cache.put(request, response.clone()));
           }
           return response;
-        })
-        .catch(() => caches.match(request))
+        } catch {
+          return caches.match(request);
+        }
+      })()
     );
     return;
   }
