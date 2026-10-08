@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
     "generate": "node src/cli/generate.js",
     "generate-timeline": "node src/cli/generateTimeline.js",
     "generate-sessions": "node src/cli/generateSessions.js",

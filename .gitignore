@@ -1,6 +1,6 @@
 # SQLite databases
 *.db
-
+.idea
 # Logs
 logs
 *.log
