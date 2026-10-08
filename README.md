@@ -3,7 +3,6 @@
 A server-rendered marketplace PWA demonstrating a multi-service architecture deployed on Render.com behind Fastly CDN. The app covers four verticals — Real Estate, Mobility, Jobs, and Recommerce — with Real Estate and Mobility powered by private synthetic-data API services.
 
 Live at **[typegear.app](https://typegear.app)**
-
 ---
 
 ## Architecture
