@@ -7,6 +7,9 @@
 # the image tool's temporary manifest file.
 apps/*/images/manifest.json.tmp
 
+# Editors
+.idea
+
 # Logs
 logs
 *.log
