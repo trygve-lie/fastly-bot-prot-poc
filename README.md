@@ -1,6 +1,6 @@
 # Marketplace PoC
 
-A server-rendered marketplace PWA demonstrating a multi-service architecture deployed on Render.com behind Fastly CDN. The app covers four verticals — Real Estate, Mobility, Jobs, and Recommerce — with Real Estate and Mobility powered by private synthetic-data API services.
+A server-rendered marketplace PWA demonstrating a multi-service architecture deployed on Render.com behind Fastly CDN. The app covers four verticals — Real Estate, Mobility, Jobs, and Recommerce — with Real Estate, Mobility and Recommerce powered by synthetic-data API services.
 
 Live at **[typegear.app](https://typegear.app)**
 
@@ -18,21 +18,22 @@ Live at **[typegear.app](https://typegear.app)**
                     │  (Hono)    │  port $PORT
                     └─────┬──────┘
                           │  internal Render network
-              ┌───────────┴───────────┐
-        ┌─────▼──────┐         ┌──────▼─────┐
-        │api-realestate│         │api-mobility│
-        │ (Hono, pserv)│         │(Hono, pserv)│
-        │  port 3002   │         │  port 3001  │
-        └─────────────┘         └─────────────┘
+          ┌───────────────┼────────────────┐
+   ┌──────▼───────┐ ┌─────▼──────┐ ┌───────▼──────┐
+   │api-realestate│ │api-mobility│ │api-recommerce│
+   │ (Hono, pserv)│ │(Hono,pserv)│ │ (Hono, web)  │
+   │  port 3002   │ │ port 3001  │ │  port 3003   │
+   └──────────────┘ └────────────┘ └──────────────┘
 ```
 
-Three Node.js services in an npm workspace:
+Four Node.js services in an npm workspace:
 
 | Service | Type | Description |
 |---|---|---|
-| `apps/frontend` | Render web service | Server-renders all HTML pages, calls private APIs |
+| `apps/frontend` | Render web service | Server-renders all HTML pages, calls the APIs |
 | `apps/api-realestate` | Render private service | Synthetic real estate listings (not publicly reachable) |
 | `apps/api-mobility` | Render private service | Synthetic vehicle listings (not publicly reachable) |
+| `apps/api-recommerce` | Render web service (public) | Synthetic second-hand item listings with images; may become private later |
 
 ---
 
@@ -44,13 +45,14 @@ Three Node.js services in an npm workspace:
 # Install all workspace dependencies from the repo root
 npm install
 
-# Start all three services (separate terminals)
+# Start all four services (separate terminals)
 npm run dev:api-realestate   # http://localhost:3002
 npm run dev:api-mobility     # http://localhost:3001
+npm run dev:api-recommerce   # http://localhost:3003
 npm run dev:frontend         # http://localhost:3000
 ```
 
-The first start of an API service takes a few minutes — it generates 5 000 synthetic listings, computes embeddings, and builds the SQLite database. Subsequent starts load from the database and are fast. Delete `apps/api-realestate/data.db` or `apps/api-mobility/data.db` to force a fresh generation.
+The first start of an API service takes a few minutes — it generates 5 000 synthetic listings, computes embeddings, and builds the SQLite database. Subsequent starts load from the database and are fast. Delete the service's `data.db` (e.g. `apps/api-recommerce/data.db`) to force a fresh generation.
 
 ---
 
@@ -58,7 +60,7 @@ The first start of an API service takes a few minutes — it generates 5 000 syn
 
 ```
 /
-├── render.yaml              Render.com Blueprint (all three services)
+├── render.yaml              Render.com Blueprint (all four services)
 ├── CLAUDE.md                Agent instructions
 ├── apps/
 │   ├── frontend/
@@ -80,23 +82,27 @@ The first start of an API service takes a few minutes — it generates 5 000 syn
 │   │   ├── src/search/      Hybrid FTS5 + vector search
 │   │   ├── src/db/store.js  SQLite persistence
 │   │   └── configs/         listings.base.json (seed, counts, calibration)
-│   └── api-mobility/
-│       └── ...              Identical structure to api-realestate
+│   ├── api-mobility/
+│   │   └── ...              Identical structure to api-realestate
+│   └── api-recommerce/
+│       ├── src/generation/text.js  Product catalogue (real brands and models)
+│       ├── configs/         items.base.json (categories, conditions, segments)
+│       └── ...              Identical structure to api-mobility
 ```
 
 ---
 
 ## The verticals
 
-### Real Estate and Mobility
+### Real Estate, Mobility and Recommerce
 
 Fully data-driven via the private API services. Each page load makes a server-side request to the appropriate API before rendering HTML.
 
-- **Vertical home** (`/realestate`, `/mobility`): Shows a randomly selected "intent" browse feed (10 listings for a random user segment)
+- **Vertical home** (`/realestate`, `/mobility`, `/recommerce`): Shows a randomly selected "intent" browse feed (10 listings for a random user segment)
 - **Search** (`/realestate/search?q=...`): Full-text hybrid search with filters
 - **Item** (`/realestate/item/:id`): Listing detail with 5 similar items
 
-### Jobs and Recommerce
+### Jobs
 
 Rendered from static in-memory data in `server.js`. No API calls.
 
@@ -104,7 +110,7 @@ Rendered from static in-memory data in `server.js`. No API calls.
 
 ## API services
 
-Both API services expose identical endpoint patterns for their respective domains. The data is entirely synthetic — generated from a fixed random seed for reproducibility. No real listings, addresses, personal data, or identifiers exist anywhere in the system.
+All three API services expose identical endpoint patterns for their respective domains. The data is entirely synthetic — generated from a fixed random seed for reproducibility. No real listings, addresses, personal data, or identifiers exist anywhere in the system.
 
 ### Real Estate endpoints
 
@@ -128,6 +134,29 @@ GET /api/vehicles/:id/similar
 GET /api/intent, /api/recommendations, /api/sitemap  (same pattern)
 ```
 
+### Recommerce endpoints
+
+```
+GET /api/search          ?q, county, category, subcategory, brand, condition, max_price, shipping=true
+GET /api/items/:id
+GET /api/items/:id/similar
+GET /api/intent, /api/recommendations, /api/sitemap  (same pattern)
+```
+
+Recommerce covers 13 categories — electronics, computers & gaming, home appliances, furniture, home decor, clothing, shoes & accessories, kids & baby, sports & outdoors, hobbies & music, books & media, antiques & collectibles, garden & tools — with real product brands (Apple, IKEA, Fjällräven, Stokke, Trek, Fender, Husqvarna, …). Sellers, shops and locations are synthetic.
+
+### API documentation
+
+Every API service publishes an OpenAPI 3.1 document and an interactive reference generated from its route definitions (via `@hono/zod-openapi` and Scalar):
+
+| Service | OpenAPI document | Interactive docs |
+|---|---|---|
+| api-realestate | http://localhost:3002/openapi.json | http://localhost:3002/docs |
+| api-mobility | http://localhost:3001/openapi.json | http://localhost:3001/docs |
+| api-recommerce | http://localhost:3003/openapi.json | http://localhost:3003/docs |
+
+The same definitions validate incoming requests — invalid parameters return `400` with a list of issues. api-realestate and api-mobility are private on Render, so their docs are reachable locally (or from inside Render's network). api-recommerce is public, so its `/docs` is also available on its `onrender.com` URL.
+
 ### Search
 
 Each service uses a hybrid retrieval pipeline: FTS5 BM25 lexical scoring + hash-based cosine vector similarity + a business weight signal. A heuristic reranker adjusts scores based on geo fit, price fit, freshness, and synthetic behavioral data (clicks, saves, contacts).
@@ -139,6 +168,8 @@ Norwegian/English synonym expansion is applied to short queries.
 **Real Estate:** first_time_buyers, family_upgraders, downsizers, investors, cabin_buyers, relocation_seekers, budget_constrained, amenity_seekers, exact_area_searchers, exploratory_browsers
 
 **Mobility:** commuters, family_buyers, first_car_buyers, eco_drivers, sport_enthusiasts, luxury_seekers, budget_hunters, van_buyers, brand_loyalists, exploratory_browsers
+
+**Recommerce:** tech_upgraders, gamers, students_furnishing, new_parents, interior_decorators, fashion_resellers, outdoor_enthusiasts, musicians_hobbyists, collectors, diy_gardeners, bargain_hunters, exploratory_browsers
 
 ---
 
@@ -176,12 +207,13 @@ Defined in `render.yaml`. All services run in the Frankfurt region on Node.js 24
 
 - Build: `npm install`
 - Start: `cd apps/frontend && node server.js`
-- Env vars: `ORIGIN=https://typegear.app`, `API_MOBILITY_URL` and `API_REALESTATE_URL` (auto-injected from private service hostports)
+- Env vars: `ORIGIN=https://typegear.app`, `API_MOBILITY_URL`, `API_REALESTATE_URL` and `API_RECOMMERCE_URL` (auto-injected from the services' internal hostports)
 
-### Private API services
+### API services
 
+- api-realestate and api-mobility are **private services** (`pserv`). api-recommerce is a **public web service** (`web`, `healthCheckPath: /health`) and may become private later. A service's type can't be changed in place on Render: delete it and re-sync the Blueprint.
 - Start: `cd apps/api-realestate && node src/server.js --db /data/data.db`
-- Both have a **1GB persistent disk** mounted at `/data` so `data.db` survives deploys. First deploy after provisioning the disk triggers a cold start (slow); all subsequent deploys are warm starts (fast).
+- Each has a **1GB persistent disk** mounted at `/data` so `data.db` survives deploys. First deploy after provisioning the disk triggers a cold start (slow); all subsequent deploys are warm starts (fast).
 - To force a cold start (e.g. after a schema change): delete `/data/data.db` via the Render Shell tab on that service.
 
 ### Fastly CDN
@@ -214,7 +246,7 @@ Edit `templates/css/layout.css` or `transitions.css`. **Restart the dev server**
 
 ### Adding a new API endpoint
 
-Add inside `createApiRouter(state)` in `src/routes/api.js` for either API service. Return JSON via `c.json(...)`. The `state` object has `state.app` (search), `state.store` (SQLite), `state.config`, and `state.listings`/`state.vehicles`.
+Define the route with `createRoute()` in `src/routes/api.js` (and its schemas in `src/routes/schemas.js`), then register it with `app.openapi(route, handler)`. It then shows up automatically in `/openapi.json` and `/docs`. The `state` object has `state.app` (search), `state.store` (SQLite), `state.config`, and `state.listings`/`state.vehicles`.
 
 ### Privacy rules (API services)
 

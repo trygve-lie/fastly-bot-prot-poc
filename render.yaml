@@ -21,6 +21,11 @@ services:
           type: pserv
           name: api-realestate
           property: hostport
+      - key: API_RECOMMERCE_URL
+        fromService:
+          type: web
+          name: api-recommerce
+          property: hostport
 
   - type: pserv
     name: api-mobility
@@ -44,6 +49,24 @@ services:
     startCommand: cd apps/api-realestate && node src/server.js --db /data/data.db
     disk:
       name: api-realestate-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 24
+
+  # Public web service for now (the other APIs are private). To make it private later:
+  # set type: pserv, remove healthCheckPath, and change fromService.type above to pserv.
+  # Render can't change a service's type in place: delete the service and re-sync the Blueprint.
+  - type: web
+    name: api-recommerce
+    runtime: node
+    region: frankfurt
+    buildCommand: npm install
+    startCommand: cd apps/api-recommerce && node src/server.js --db /data/data.db
+    healthCheckPath: /health
+    disk:
+      name: api-recommerce-data
       mountPath: /data
       sizeGB: 1
     envVars:

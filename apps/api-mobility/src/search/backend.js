@@ -36,6 +36,21 @@ function matchesFilters(doc, filters) {
 }
 
 /**
+ * Builds an FTS5 MATCH expression that ORs the query tokens and their synonym expansions,
+ * mirroring how the in-memory BM25 fallback sums scores over expanded terms.
+ * @param {import('./queryPreprocessor.js').PreparedQuery} preparedQuery
+ * @param {Object} queryPreprocessor
+ * @returns {string}
+ */
+function buildFtsQuery(preparedQuery, queryPreprocessor) {
+  const terms = new Set(preparedQuery.tokens);
+  for (const expansion of preparedQuery.expandedQueries) {
+    for (const term of queryPreprocessor.tokenize(expansion)) terms.add(term);
+  }
+  return [...terms].map(t => `"${t.replace(/"/g, '""')}"`).join(' OR ');
+}
+
+/**
  * Queries the FTS5 virtual table and returns a normalised BM25 score map, or null on failure/unavailability.
  * @param {Object|null} store
  * @param {string} queryText
@@ -197,7 +212,7 @@ export function createSearchBackend(searchConfig, documentRepository, embeddingS
     const countyValues = request.filters
       .filter(f => f.field === 'county')
       .flatMap(f => f.operator === 'in' ? f.value : [f.value]);
-    const fts5Scores = queryFTS5(store, preparedQuery.normalizedText, FTS_TABLE, countyValues.length ? countyValues : null);
+    const fts5Scores = queryFTS5(store, buildFtsQuery(preparedQuery, queryPreprocessor), FTS_TABLE, countyValues.length ? countyValues : null);
     const corpusSize = Math.max(documentTermsMap.size, 1);
     const docFreq = fts5Scores ? null : documentFrequency(preparedQuery);
     const expandedQueryTerms = fts5Scores ? [] : (() => {

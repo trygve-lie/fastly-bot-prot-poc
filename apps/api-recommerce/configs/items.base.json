@@ -1,0 +1,377 @@
+{
+  "seed": 20260312,
+  "snapshot_date": "2026-03-12",
+  "listing_count": 5000,
+  "text_mode": "deterministic",
+  "max_images_per_listing": 6,
+  "calibration": {
+    "feature_bonus_per_tag": 0.02,
+    "price_noise_min": 0.85,
+    "price_noise_max": 1.15,
+    "shop_share": 0.12,
+    "bidding_share": 0.08,
+    "shipping_share": 0.6,
+    "categories": [
+      {
+        "name": "electronics", "label": "Electronics", "weight": 0.11, "depreciation_per_year": 0.18, "collectible": false,
+        "subcategories": [
+          { "name": "phone",      "label": "Phone",      "weight": 0.30, "price_min": 2500, "price_max": 16000, "age_min": 0, "age_max": 6,  "bulky": false },
+          { "name": "tablet",     "label": "Tablet",     "weight": 0.12, "price_min": 2500, "price_max": 14000, "age_min": 0, "age_max": 6,  "bulky": false },
+          { "name": "camera",     "label": "Camera",     "weight": 0.12, "price_min": 3000, "price_max": 30000, "age_min": 0, "age_max": 10, "bulky": false },
+          { "name": "headphones", "label": "Headphones", "weight": 0.18, "price_min": 500,  "price_max": 5000,  "age_min": 0, "age_max": 5,  "bulky": false },
+          { "name": "speaker",    "label": "Speaker",    "weight": 0.12, "price_min": 800,  "price_max": 8000,  "age_min": 0, "age_max": 8,  "bulky": false },
+          { "name": "tv",         "label": "TV",         "weight": 0.10, "price_min": 4000, "price_max": 25000, "age_min": 0, "age_max": 8,  "bulky": true },
+          { "name": "smartwatch", "label": "Smartwatch", "weight": 0.06, "price_min": 1500, "price_max": 8000,  "age_min": 0, "age_max": 4,  "bulky": false }
+        ]
+      },
+      {
+        "name": "computers_gaming", "label": "Computers & gaming", "weight": 0.08, "depreciation_per_year": 0.18, "collectible": false,
+        "subcategories": [
+          { "name": "laptop",       "label": "Laptop",       "weight": 0.28, "price_min": 5000, "price_max": 30000, "age_min": 0, "age_max": 7,  "bulky": false },
+          { "name": "desktop",      "label": "Desktop PC",   "weight": 0.10, "price_min": 6000, "price_max": 35000, "age_min": 0, "age_max": 8,  "bulky": false },
+          { "name": "monitor",      "label": "Monitor",      "weight": 0.16, "price_min": 1500, "price_max": 10000, "age_min": 0, "age_max": 8,  "bulky": false },
+          { "name": "game_console", "label": "Game console", "weight": 0.18, "price_min": 3000, "price_max": 7000,  "age_min": 0, "age_max": 10, "bulky": false },
+          { "name": "video_game",   "label": "Video game",   "weight": 0.20, "price_min": 200,  "price_max": 800,   "age_min": 0, "age_max": 15, "bulky": false },
+          { "name": "keyboard",     "label": "Keyboard",     "weight": 0.08, "price_min": 400,  "price_max": 2500,  "age_min": 0, "age_max": 6,  "bulky": false }
+        ]
+      },
+      {
+        "name": "home_appliances", "label": "Home appliances", "weight": 0.07, "depreciation_per_year": 0.10, "collectible": false,
+        "subcategories": [
+          { "name": "coffee_machine",  "label": "Coffee machine",  "weight": 0.26, "price_min": 1500, "price_max": 12000, "age_min": 0, "age_max": 10, "bulky": false },
+          { "name": "vacuum_cleaner",  "label": "Vacuum cleaner",  "weight": 0.22, "price_min": 1500, "price_max": 9000,  "age_min": 0, "age_max": 8,  "bulky": false },
+          { "name": "washing_machine", "label": "Washing machine", "weight": 0.12, "price_min": 5000, "price_max": 14000, "age_min": 0, "age_max": 12, "bulky": true },
+          { "name": "microwave",       "label": "Microwave",       "weight": 0.12, "price_min": 900,  "price_max": 4000,  "age_min": 0, "age_max": 10, "bulky": false },
+          { "name": "stand_mixer",     "label": "Stand mixer",     "weight": 0.14, "price_min": 2500, "price_max": 9000,  "age_min": 0, "age_max": 15, "bulky": false },
+          { "name": "dishwasher",      "label": "Dishwasher",      "weight": 0.14, "price_min": 5000, "price_max": 12000, "age_min": 0, "age_max": 12, "bulky": true }
+        ]
+      },
+      {
+        "name": "furniture", "label": "Furniture", "weight": 0.12, "depreciation_per_year": 0.06, "collectible": false,
+        "subcategories": [
+          { "name": "sofa",         "label": "Sofa",         "weight": 0.16, "price_min": 6000, "price_max": 40000, "age_min": 0, "age_max": 20, "bulky": true },
+          { "name": "armchair",     "label": "Armchair",     "weight": 0.14, "price_min": 2500, "price_max": 30000, "age_min": 0, "age_max": 30, "bulky": true },
+          { "name": "dining_table", "label": "Dining table", "weight": 0.12, "price_min": 3000, "price_max": 30000, "age_min": 0, "age_max": 30, "bulky": true },
+          { "name": "chair",        "label": "Chair",        "weight": 0.20, "price_min": 500,  "price_max": 12000, "age_min": 0, "age_max": 40, "bulky": false },
+          { "name": "bookshelf",    "label": "Bookshelf",    "weight": 0.12, "price_min": 800,  "price_max": 10000, "age_min": 0, "age_max": 25, "bulky": true },
+          { "name": "bed",          "label": "Bed",          "weight": 0.08, "price_min": 4000, "price_max": 25000, "age_min": 0, "age_max": 15, "bulky": true },
+          { "name": "desk",         "label": "Desk",         "weight": 0.10, "price_min": 1500, "price_max": 12000, "age_min": 0, "age_max": 20, "bulky": true },
+          { "name": "wardrobe",     "label": "Wardrobe",     "weight": 0.08, "price_min": 2000, "price_max": 15000, "age_min": 0, "age_max": 25, "bulky": true }
+        ]
+      },
+      {
+        "name": "home_decor", "allow_for_parts": false, "label": "Home decor", "weight": 0.08, "depreciation_per_year": 0.04, "collectible": false,
+        "subcategories": [
+          { "name": "lamp",          "label": "Lamp",          "weight": 0.24, "price_min": 400, "price_max": 12000, "age_min": 0, "age_max": 40, "bulky": false },
+          { "name": "rug",           "label": "Rug",           "weight": 0.16, "price_min": 800, "price_max": 15000, "age_min": 0, "age_max": 30, "bulky": false },
+          { "name": "vase",          "label": "Vase",          "weight": 0.16, "price_min": 200, "price_max": 4000,  "age_min": 0, "age_max": 50, "bulky": false },
+          { "name": "mirror",        "label": "Mirror",        "weight": 0.12, "price_min": 400, "price_max": 6000,  "age_min": 0, "age_max": 40, "bulky": false },
+          { "name": "candle_holder", "label": "Candle holder", "weight": 0.14, "price_min": 150, "price_max": 2500,  "age_min": 0, "age_max": 50, "bulky": false },
+          { "name": "figurine",      "label": "Figurine",      "weight": 0.10, "price_min": 100, "price_max": 3000,  "age_min": 0, "age_max": 60, "bulky": false },
+          { "name": "picture_frame", "label": "Picture frame", "weight": 0.08, "price_min": 100, "price_max": 1500,  "age_min": 0, "age_max": 40, "bulky": false }
+        ]
+      },
+      {
+        "name": "clothing", "allow_for_parts": false, "label": "Clothing", "weight": 0.11, "depreciation_per_year": 0.12, "collectible": false,
+        "subcategories": [
+          { "name": "jacket",  "label": "Jacket",  "weight": 0.24, "price_min": 1000, "price_max": 6000, "age_min": 0, "age_max": 10, "bulky": false, "size_scale": "apparel" },
+          { "name": "coat",    "label": "Coat",    "weight": 0.14, "price_min": 1500, "price_max": 9000, "age_min": 0, "age_max": 15, "bulky": false, "size_scale": "apparel" },
+          { "name": "sweater", "label": "Sweater", "weight": 0.18, "price_min": 400,  "price_max": 3000, "age_min": 0, "age_max": 10, "bulky": false, "size_scale": "apparel" },
+          { "name": "jeans",   "label": "Jeans",   "weight": 0.18, "price_min": 500,  "price_max": 2500, "age_min": 0, "age_max": 10, "bulky": false, "size_scale": "apparel" },
+          { "name": "dress",   "label": "Dress",   "weight": 0.14, "price_min": 400,  "price_max": 4000, "age_min": 0, "age_max": 10, "bulky": false, "size_scale": "apparel" },
+          { "name": "shirt",   "label": "Shirt",   "weight": 0.12, "price_min": 300,  "price_max": 1500, "age_min": 0, "age_max": 10, "bulky": false, "size_scale": "apparel" }
+        ]
+      },
+      {
+        "name": "shoes_accessories", "label": "Shoes & accessories", "weight": 0.08, "depreciation_per_year": 0.10, "collectible": false,
+        "subcategories": [
+          { "name": "sneakers",   "label": "Sneakers",   "weight": 0.24, "price_min": 800,  "price_max": 2500,  "age_min": 0, "age_max": 5,  "bulky": false, "size_scale": "shoes" },
+          { "name": "boots",      "label": "Boots",      "weight": 0.18, "price_min": 1200, "price_max": 4000,  "age_min": 0, "age_max": 8,  "bulky": false, "size_scale": "shoes" },
+          { "name": "handbag",    "label": "Handbag",    "weight": 0.20, "price_min": 800,  "price_max": 25000, "age_min": 0, "age_max": 15, "bulky": false },
+          { "name": "watch",      "label": "Watch",      "weight": 0.14, "price_min": 1500, "price_max": 60000, "age_min": 0, "age_max": 30, "bulky": false },
+          { "name": "sunglasses", "label": "Sunglasses", "weight": 0.12, "price_min": 800,  "price_max": 3500,  "age_min": 0, "age_max": 10, "bulky": false },
+          { "name": "jewellery",  "label": "Jewellery",  "weight": 0.12, "price_min": 400,  "price_max": 15000, "age_min": 0, "age_max": 40, "bulky": false }
+        ]
+      },
+      {
+        "name": "kids_baby", "allow_for_parts": false, "label": "Kids & baby", "weight": 0.08, "depreciation_per_year": 0.10, "collectible": false,
+        "subcategories": [
+          { "name": "stroller",      "label": "Stroller",      "weight": 0.20, "price_min": 4000, "price_max": 15000, "age_min": 0, "age_max": 6,  "bulky": true },
+          { "name": "car_seat",      "label": "Car seat",      "weight": 0.14, "price_min": 2000, "price_max": 6000,  "age_min": 0, "age_max": 6,  "bulky": false },
+          { "name": "high_chair",    "label": "High chair",    "weight": 0.12, "price_min": 1500, "price_max": 4000,  "age_min": 0, "age_max": 10, "bulky": false },
+          { "name": "toy",           "label": "Toy",           "weight": 0.22, "price_min": 150,  "price_max": 1500,  "age_min": 0, "age_max": 10, "bulky": false },
+          { "name": "kids_clothing", "label": "Kids clothing", "weight": 0.22, "price_min": 150,  "price_max": 1500,  "age_min": 0, "age_max": 5,  "bulky": false, "size_scale": "kids" },
+          { "name": "crib",          "label": "Crib",          "weight": 0.10, "price_min": 2000, "price_max": 7000,  "age_min": 0, "age_max": 10, "bulky": true }
+        ]
+      },
+      {
+        "name": "sports_outdoors", "label": "Sports & outdoors", "weight": 0.10, "depreciation_per_year": 0.08, "collectible": false,
+        "subcategories": [
+          { "name": "bicycle",       "label": "Bicycle",       "weight": 0.22, "price_min": 4000, "price_max": 40000, "age_min": 0, "age_max": 12, "bulky": true },
+          { "name": "skis",          "label": "Skis",          "weight": 0.18, "price_min": 2500, "price_max": 9000,  "age_min": 0, "age_max": 12, "bulky": false },
+          { "name": "snowboard",     "label": "Snowboard",     "weight": 0.10, "price_min": 3000, "price_max": 8000,  "age_min": 0, "age_max": 12, "bulky": false },
+          { "name": "tent",          "label": "Tent",          "weight": 0.12, "price_min": 1500, "price_max": 12000, "age_min": 0, "age_max": 15, "bulky": false },
+          { "name": "running_shoes", "label": "Running shoes", "weight": 0.14, "price_min": 900,  "price_max": 2200,  "age_min": 0, "age_max": 4,  "bulky": false, "size_scale": "shoes" },
+          { "name": "gym_equipment", "label": "Gym equipment", "weight": 0.12, "price_min": 500,  "price_max": 15000, "age_min": 0, "age_max": 15, "bulky": false },
+          { "name": "golf_clubs",    "label": "Golf clubs",    "weight": 0.12, "price_min": 3000, "price_max": 25000, "age_min": 0, "age_max": 20, "bulky": false }
+        ]
+      },
+      {
+        "name": "hobbies_music", "label": "Hobbies & music", "weight": 0.07, "depreciation_per_year": 0.04, "collectible": false,
+        "subcategories": [
+          { "name": "guitar",              "label": "Guitar",         "weight": 0.24, "price_min": 2000, "price_max": 30000, "age_min": 0, "age_max": 40, "bulky": false },
+          { "name": "keyboard_instrument", "label": "Keyboard",       "weight": 0.14, "price_min": 3000, "price_max": 25000, "age_min": 0, "age_max": 20, "bulky": false },
+          { "name": "drum_kit",            "label": "Drum kit",       "weight": 0.08, "price_min": 5000, "price_max": 25000, "age_min": 0, "age_max": 25, "bulky": true },
+          { "name": "board_game",          "label": "Board game",     "weight": 0.20, "price_min": 300,  "price_max": 1200,  "age_min": 0, "age_max": 20, "bulky": false },
+          { "name": "sewing_machine",      "label": "Sewing machine", "weight": 0.12, "price_min": 2000, "price_max": 9000,  "age_min": 0, "age_max": 30, "bulky": false },
+          { "name": "lego_set",            "label": "LEGO set",       "weight": 0.22, "price_min": 300,  "price_max": 7000,  "age_min": 0, "age_max": 20, "bulky": false }
+        ]
+      },
+      {
+        "name": "books_media", "allow_for_parts": false, "label": "Books & media", "weight": 0.05, "depreciation_per_year": 0.05, "collectible": false,
+        "subcategories": [
+          { "name": "book",         "label": "Book",         "weight": 0.36, "price_min": 150, "price_max": 500,  "age_min": 0, "age_max": 40, "bulky": false },
+          { "name": "vinyl_record", "label": "Vinyl record", "weight": 0.24, "price_min": 200, "price_max": 900,  "age_min": 0, "age_max": 60, "bulky": false },
+          { "name": "comic",        "label": "Comic",        "weight": 0.14, "price_min": 80,  "price_max": 600,  "age_min": 0, "age_max": 50, "bulky": false },
+          { "name": "film",         "label": "Film",         "weight": 0.12, "price_min": 80,  "price_max": 400,  "age_min": 0, "age_max": 25, "bulky": false },
+          { "name": "textbook",     "label": "Textbook",     "weight": 0.14, "price_min": 400, "price_max": 1200, "age_min": 0, "age_max": 10, "bulky": false }
+        ]
+      },
+      {
+        "name": "antiques_collectibles", "label": "Antiques & collectibles", "weight": 0.04, "depreciation_per_year": 0.0, "collectible": true,
+        "subcategories": [
+          { "name": "wall_clock",  "label": "Wall clock",  "weight": 0.16, "price_min": 2000, "price_max": 30000, "age_min": 40, "age_max": 150, "bulky": false },
+          { "name": "coin",        "label": "Coin",        "weight": 0.14, "price_min": 300,  "price_max": 20000, "age_min": 30, "age_max": 200, "bulky": false },
+          { "name": "stamp",       "label": "Stamp",       "weight": 0.12, "price_min": 100,  "price_max": 8000,  "age_min": 30, "age_max": 150, "bulky": false },
+          { "name": "painting",    "label": "Painting",    "weight": 0.16, "price_min": 2000, "price_max": 80000, "age_min": 30, "age_max": 150, "bulky": false },
+          { "name": "porcelain",   "label": "Porcelain",   "weight": 0.22, "price_min": 500,  "price_max": 15000, "age_min": 30, "age_max": 150, "bulky": false },
+          { "name": "silverware",  "label": "Silverware",  "weight": 0.20, "price_min": 1000, "price_max": 25000, "age_min": 30, "age_max": 120, "bulky": false }
+        ]
+      },
+      {
+        "name": "garden_tools", "label": "Garden & tools", "weight": 0.05, "depreciation_per_year": 0.07, "collectible": false,
+        "subcategories": [
+          { "name": "lawn_mower",       "label": "Lawn mower",       "weight": 0.20, "price_min": 2500, "price_max": 20000, "age_min": 0, "age_max": 12, "bulky": true },
+          { "name": "power_drill",      "label": "Power drill",      "weight": 0.22, "price_min": 800,  "price_max": 4000,  "age_min": 0, "age_max": 12, "bulky": false },
+          { "name": "garden_furniture", "label": "Garden furniture", "weight": 0.18, "price_min": 2000, "price_max": 15000, "age_min": 0, "age_max": 15, "bulky": true },
+          { "name": "grill",            "label": "Grill",            "weight": 0.16, "price_min": 2000, "price_max": 15000, "age_min": 0, "age_max": 10, "bulky": true },
+          { "name": "hedge_trimmer",    "label": "Hedge trimmer",    "weight": 0.12, "price_min": 1000, "price_max": 4500,  "age_min": 0, "age_max": 10, "bulky": false },
+          { "name": "chainsaw",         "label": "Chainsaw",         "weight": 0.12, "price_min": 2000, "price_max": 8000,  "age_min": 0, "age_max": 12, "bulky": false }
+        ]
+      }
+    ],
+    "conditions": [
+      { "name": "new",       "label": "new",                  "weight": 0.08, "price_multiplier": 0.80, "collectible_price_multiplier": 1.20 },
+      { "name": "like_new",  "label": "like-new",             "weight": 0.24, "price_multiplier": 0.62, "collectible_price_multiplier": 1.15 },
+      { "name": "good",      "label": "good",                 "weight": 0.40, "price_multiplier": 0.48, "collectible_price_multiplier": 1.00 },
+      { "name": "fair",      "label": "fair",                 "weight": 0.20, "price_multiplier": 0.32, "collectible_price_multiplier": 0.70 },
+      { "name": "for_parts", "label": "for parts or repair",  "weight": 0.08, "price_multiplier": 0.10, "collectible_price_multiplier": 0.30 }
+    ]
+  },
+  "churn": {
+    "timeline_days": 14,
+    "daily_new_rate": 0.05,
+    "daily_update_rate": 0.06,
+    "daily_removed_rate": 0.015,
+    "daily_sold_rate": 0.035,
+    "daily_relist_rate": 0.006,
+    "price_change_probability": 0.4,
+    "price_change_max_fraction": 0.15
+  },
+  "behavior": {
+    "session_count": 180,
+    "min_queries_per_session": 1,
+    "max_queries_per_session": 3,
+    "max_results_per_query": 8,
+    "candidate_pool_size": 24,
+    "click_threshold": 0.48,
+    "save_threshold": 0.7,
+    "contact_threshold": 0.84,
+    "abandonment_threshold": 0.35,
+    "user_segments": [
+      {
+        "name": "tech_upgraders",
+        "weight": 0.12,
+        "preferred_categories": ["electronics", "computers_gaming"],
+        "preferred_features": ["original_box", "receipt", "warranty_remaining"],
+        "preferred_regions": ["Oslo", "Vestland", "Trondelag", "Rogaland"],
+        "budget_min_ratio": 0.80,
+        "budget_max_ratio": 1.30,
+        "exploratory_share": 0.12
+      },
+      {
+        "name": "gamers",
+        "weight": 0.08,
+        "preferred_categories": ["computers_gaming", "electronics"],
+        "preferred_features": ["accessories_included", "original_box", "complete_set"],
+        "preferred_regions": ["Oslo", "Vestland", "Trondelag", "Rogaland", "Agder"],
+        "budget_min_ratio": 0.60,
+        "budget_max_ratio": 1.10,
+        "exploratory_share": 0.18
+      },
+      {
+        "name": "students_furnishing",
+        "weight": 0.10,
+        "preferred_categories": ["furniture", "home_appliances", "books_media"],
+        "preferred_features": ["smoke_free_home", "pet_free_home"],
+        "preferred_regions": ["Oslo", "Vestland", "Trondelag"],
+        "budget_min_ratio": 0.40,
+        "budget_max_ratio": 0.85,
+        "exploratory_share": 0.20
+      },
+      {
+        "name": "new_parents",
+        "weight": 0.09,
+        "preferred_categories": ["kids_baby"],
+        "preferred_features": ["smoke_free_home", "pet_free_home", "accessories_included"],
+        "preferred_regions": ["Oslo", "Vestland", "Trondelag", "Rogaland", "Agder"],
+        "budget_min_ratio": 0.60,
+        "budget_max_ratio": 1.15,
+        "exploratory_share": 0.10
+      },
+      {
+        "name": "interior_decorators",
+        "weight": 0.09,
+        "preferred_categories": ["home_decor", "furniture", "antiques_collectibles"],
+        "preferred_features": ["vintage", "handmade", "smoke_free_home"],
+        "preferred_regions": ["Oslo", "Vestland", "Rogaland"],
+        "budget_min_ratio": 0.80,
+        "budget_max_ratio": 1.40,
+        "exploratory_share": 0.22
+      },
+      {
+        "name": "fashion_resellers",
+        "weight": 0.09,
+        "preferred_categories": ["clothing", "shoes_accessories"],
+        "preferred_features": ["original_tags", "barely_used", "smoke_free_home"],
+        "preferred_regions": ["Oslo", "Vestland", "Trondelag", "Rogaland"],
+        "budget_min_ratio": 0.45,
+        "budget_max_ratio": 0.90,
+        "exploratory_share": 0.16
+      },
+      {
+        "name": "outdoor_enthusiasts",
+        "weight": 0.09,
+        "preferred_categories": ["sports_outdoors", "clothing"],
+        "preferred_features": ["recently_serviced", "barely_used", "accessories_included"],
+        "preferred_regions": ["Trondelag", "Nordland", "Vestland", "Oslo"],
+        "budget_min_ratio": 0.70,
+        "budget_max_ratio": 1.25,
+        "exploratory_share": 0.14
+      },
+      {
+        "name": "musicians_hobbyists",
+        "weight": 0.07,
+        "preferred_categories": ["hobbies_music"],
+        "preferred_features": ["accessories_included", "complete_set", "original_box"],
+        "preferred_regions": ["Oslo", "Vestland", "Trondelag", "Agder"],
+        "budget_min_ratio": 0.75,
+        "budget_max_ratio": 1.30,
+        "exploratory_share": 0.16
+      },
+      {
+        "name": "collectors",
+        "weight": 0.06,
+        "preferred_categories": ["antiques_collectibles", "books_media", "hobbies_music"],
+        "preferred_features": ["vintage", "signed", "provenance_documented", "complete_set"],
+        "preferred_regions": ["Oslo", "Vestland", "Rogaland", "Agder"],
+        "budget_min_ratio": 0.90,
+        "budget_max_ratio": 1.60,
+        "exploratory_share": 0.18
+      },
+      {
+        "name": "diy_gardeners",
+        "weight": 0.07,
+        "preferred_categories": ["garden_tools", "home_appliances"],
+        "preferred_features": ["recently_serviced", "accessories_included", "receipt"],
+        "preferred_regions": ["Agder", "Rogaland", "Trondelag", "Nordland"],
+        "budget_min_ratio": 0.60,
+        "budget_max_ratio": 1.15,
+        "exploratory_share": 0.14
+      },
+      {
+        "name": "bargain_hunters",
+        "weight": 0.10,
+        "preferred_categories": ["furniture", "home_decor", "clothing", "kids_baby", "books_media", "sports_outdoors"],
+        "preferred_features": ["barely_used", "minor_scratches"],
+        "preferred_regions": ["Agder", "Nordland", "Trondelag", "Vestland"],
+        "budget_min_ratio": 0.30,
+        "budget_max_ratio": 0.70,
+        "exploratory_share": 0.24
+      },
+      {
+        "name": "exploratory_browsers",
+        "weight": 0.04,
+        "preferred_categories": ["electronics", "computers_gaming", "home_appliances", "furniture", "home_decor", "clothing", "shoes_accessories", "kids_baby", "sports_outdoors", "hobbies_music", "books_media", "antiques_collectibles", "garden_tools"],
+        "preferred_features": ["original_box", "vintage", "barely_used", "smoke_free_home"],
+        "preferred_regions": ["Oslo", "Vestland", "Nordland"],
+        "budget_min_ratio": 0.55,
+        "budget_max_ratio": 1.30,
+        "exploratory_share": 0.60
+      }
+    ]
+  },
+  "search": {
+    "embedding_dimensions": 16,
+    "lexical_weight": 0.45,
+    "vector_weight": 0.45,
+    "business_weight": 0.10,
+    "candidate_pool_size": 50,
+    "rerank_depth": 30,
+    "expansion_enabled": true,
+    "max_rewrites": 4,
+    "short_query_token_threshold": 2,
+    "default_page_size": 10
+  },
+  "discovery": {
+    "similar_results": 6,
+    "recommendation_results": 8,
+    "browse_results": 8,
+    "diversity_lambda": 0.15,
+    "behavior_boost_weight": 0.20
+  },
+  "counties": [
+    {
+      "name": "Oslo",
+      "municipalities": ["Oslo"],
+      "weight": 0.24,
+      "price_index": 1.10,
+      "urban_share": 0.95
+    },
+    {
+      "name": "Vestland",
+      "municipalities": ["Bergen", "Askoy", "Alver"],
+      "weight": 0.18,
+      "price_index": 1.00,
+      "urban_share": 0.72
+    },
+    {
+      "name": "Trondelag",
+      "municipalities": ["Trondheim", "Malvik", "Melhus"],
+      "weight": 0.17,
+      "price_index": 0.98,
+      "urban_share": 0.68
+    },
+    {
+      "name": "Rogaland",
+      "municipalities": ["Stavanger", "Sandnes", "Sola"],
+      "weight": 0.17,
+      "price_index": 1.02,
+      "urban_share": 0.70
+    },
+    {
+      "name": "Agder",
+      "municipalities": ["Kristiansand", "Lillesand", "Arendal"],
+      "weight": 0.13,
+      "price_index": 0.94,
+      "urban_share": 0.58
+    },
+    {
+      "name": "Nordland",
+      "municipalities": ["Bodo", "Narvik", "Sortland"],
+      "weight": 0.11,
+      "price_index": 0.90,
+      "urban_share": 0.44
+    }
+  ]
+}

@@ -241,13 +241,13 @@ The in-memory search index (bucket index, inverted index, vector store) is alway
 
 ### FTS5 lexical search
 
-At search time, `queryFTS5()` in `search/backend.js` queries `listings_fts` with `WHERE text_content MATCH ? AND county IN (...)` (county values extracted from the active filter). This ensures the BM25 candidate pool is scoped to the selected counties, preventing good county-specific matches from being displaced by global top-N limits.
+At search time, `buildFtsQuery()` ORs the query tokens with their synonym expansions and `queryFTS5()` in `search/backend.js` queries `listings_fts` with `WHERE text_content MATCH ? AND county IN (...)` (county values extracted from the active filter). This ensures the BM25 candidate pool is scoped to the selected counties, preventing good county-specific matches from being displaced by global top-N limits.
 
 If FTS5 is unavailable (no store, or query is empty), the backend falls back to in-memory BM25 using `invertedIndex`, `documentTermsMap`, and `termFreqMap`.
 
 ### Schema migrations
 
-`openStore` applies `ALTER TABLE` migrations for any new columns added after an existing `data.db` was created. The FTS5 table is automatically dropped and rebuilt if the `county` column is missing.
+`openStore` applies `ALTER TABLE` migrations for any new columns added after an existing `data.db` was created. The FTS5 table is automatically dropped and rebuilt if the `county` column is missing or if it was created contentless (a contentless table returns NULL for `listing_id`, which breaks the BM25 join).
 
 ## Privacy
 
@@ -300,3 +300,12 @@ Fully reproducible from `seed` + `snapshot_date` + config. The mulberry32 PRNG i
 - Keep the adapter layer (`src/search/adapters.js`) clean — it is the main seam between generation and search.
 - All JSON-returning routes belong in `src/routes/api.js`; all HTML in `src/routes/frontend.js`; `src/server.js` is the orchestrator only.
 - The store stays open for the server's lifetime — do not call `store.close()` inside request handlers.
+
+## API Documentation (OpenAPI)
+
+- `src/routes/api.js` is an `OpenAPIHono` router (`@hono/zod-openapi`). Every route is declared with `createRoute()` in `defineRoutes()` and registered with `app.openapi(route, handler)`.
+- Request/response schemas live in `src/routes/schemas.js` (Zod 4), built from the loaded config so enums match the generated data.
+- `GET /openapi.json` serves the generated OpenAPI 3.1 document; `GET /docs` serves the Scalar API reference (mounted in `server.js`).
+- Validation errors return 400 `{ error: 'Invalid request', issues: [{ path, message }] }` via the shared `defaultHook`.
+- When changing a response shape (adapters, search hits, discovery hits), update `schemas.js` in the same change so the docs stay accurate. Never register plain `app.get()`/`app.post()` routes in the API router — they won't be documented or validated.
+

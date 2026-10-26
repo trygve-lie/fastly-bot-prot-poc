@@ -32,14 +32,17 @@ function createDocumentRepository() {
   };
 }
 
+export const FILTER_OPERATORS = ['eq', 'lte', 'gte', 'in'];
+export const FILTER_FIELDS = ['county', 'municipality', 'property_type', 'bedrooms', 'asking_price', 'total_price', 'energy_rating', 'days_on_market', 'listing_status', 'amenity_tags'];
+
 /**
  * Validates and normalises raw filter objects from an HTTP payload.
  * @param {Object[]|null} rawFilters
  * @returns {import('./adapters.js').StructuredFilter[]}
  */
 function parseFilters(rawFilters) {
-  const ALLOWED_OPERATORS = new Set(['eq', 'lte', 'gte', 'in']);
-  const ALLOWED_FIELDS = new Set(['county', 'municipality', 'property_type', 'bedrooms', 'asking_price', 'total_price', 'energy_rating', 'days_on_market', 'listing_status', 'amenity_tags']);
+  const ALLOWED_OPERATORS = new Set(FILTER_OPERATORS);
+  const ALLOWED_FIELDS = new Set(FILTER_FIELDS);
   return (rawFilters || []).map(f => {
     if (!ALLOWED_OPERATORS.has(f.operator)) throw new Error(`unsupported filter operator: ${f.operator}`);
     if (!ALLOWED_FIELDS.has(f.field)) throw new Error(`unsupported filter field: ${f.field}`);

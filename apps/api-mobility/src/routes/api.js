@@ -1,83 +1,146 @@
-import { Hono } from 'hono';
+import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
+import { createSchemas } from './schemas.js';
+
+const SERVICE_NAME = 'api-mobility';
+const SERVICE_VERSION = '1.0.0';
+const DEFAULT_CLUSTER = 'commuters';
 
 /**
- * Builds a search payload from URLSearchParams.
- * Supports: q, county (repeatable), vehicle_type, max_price, max_mileage, page, page_size.
- * @param {URLSearchParams} p
+ * Formats Zod validation failures into the service's ValidationError shape (HTTP 400).
+ * Shared by every route via OpenAPIHono's defaultHook.
+ * @param {{ success: boolean, error?: import('zod').ZodError }} result
+ * @param {import('hono').Context} c
+ * @returns {Response|undefined}
+ */
+function validationErrorHook(result, c) {
+  if (result.success) return undefined;
+  return c.json({
+    error: 'Invalid request',
+    issues: result.error.issues.map(issue => ({ path: issue.path.join('.'), message: issue.message })),
+  }, 400);
+}
+
+/**
+ * Converts validated search query parameters into a search payload with structured filters.
+ * @param {Object} query - Output of the SearchQuery schema.
  * @returns {Object}
  */
-function buildApiSearchPayload(p) {
-  const counties = p.getAll('county').filter(Boolean);
+function buildApiSearchPayload(query) {
+  const counties = [].concat(query.county ?? []);
   const filters = [];
   if (counties.length === 1) filters.push({ field: 'county', operator: 'eq', value: counties[0] });
   else if (counties.length > 1) filters.push({ field: 'county', operator: 'in', value: counties });
-  const vehicleType = p.get('vehicle_type');
-  if (vehicleType) filters.push({ field: 'vehicle_type', operator: 'eq', value: vehicleType });
-  const maxPrice = p.get('max_price');
-  if (maxPrice) filters.push({ field: 'total_price', operator: 'lte', value: parseInt(maxPrice) });
-  const maxMileage = p.get('max_mileage');
-  if (maxMileage) filters.push({ field: 'mileage_km', operator: 'lte', value: parseInt(maxMileage) });
+  if (query.vehicle_type) filters.push({ field: 'vehicle_type', operator: 'eq', value: query.vehicle_type });
+  if (query.max_price != null) filters.push({ field: 'total_price', operator: 'lte', value: query.max_price });
+  if (query.max_mileage != null) filters.push({ field: 'mileage_km', operator: 'lte', value: query.max_mileage });
   return {
-    query_text: p.get('q') || '',
+    query_text: query.q || '',
     filters,
-    page: Math.max(1, parseInt(p.get('page') || '1')),
-    page_size: Math.min(50, Math.max(1, parseInt(p.get('page_size') || '10'))),
+    page: query.page ?? 1,
+    page_size: query.page_size ?? 10,
     language_hint: 'no',
   };
 }
 
 /**
- * Creates the API sub-application containing all JSON-returning endpoints.
- * Mounts: POST /search, POST /discover/similar, POST /discover/recommendations,
- * GET /api/vehicles/:id, GET /api/vehicles/:id/similar, GET /api/search,
- * GET /api/recommendations.
+ * Returns an OpenAPI response entry with a JSON body.
+ * @param {import('zod').ZodType} schema
+ * @param {string} description
+ * @returns {Object}
+ */
+function jsonResponse(schema, description) {
+  return { description, content: { 'application/json': { schema } } };
+}
+
+/**
+ * Defines every route of the API (path, parameters, request bodies, response schemas).
+ * The definitions drive request validation and the generated OpenAPI document.
+ * @param {ReturnType<typeof createSchemas>} s
+ * @returns {Object.<string, Object>}
+ */
+function defineRoutes(s) {
+  const invalid = jsonResponse(s.ValidationError, 'Invalid request parameters');
+  const notFound = jsonResponse(s.Error, 'No vehicle with this ID');
+  const jsonBody = schema => ({ required: true, content: { 'application/json': { schema } } });
+
+  return {
+    search: createRoute({
+      method: 'get', path: '/api/search', tags: ['Search'],
+      summary: 'Search vehicles',
+      description: 'Hybrid full-text (FTS5 BM25 with Norwegian/English synonym expansion) and vector search with structured filters, reranking and facets.',
+      request: { query: s.SearchQuery },
+      responses: { 200: jsonResponse(s.SearchResponse, 'Paged search results with facets'), 400: invalid },
+    }),
+    item: createRoute({
+      method: 'get', path: '/api/vehicles/{id}', tags: ['Vehicles'],
+      summary: 'Get a vehicle',
+      description: 'Returns the full search document for one vehicle.',
+      request: { params: s.IdParam },
+      responses: { 200: jsonResponse(s.Item, 'The vehicle'), 404: notFound },
+    }),
+    similar: createRoute({
+      method: 'get', path: '/api/vehicles/{id}/similar', tags: ['Vehicles'],
+      summary: 'Get similar vehicles',
+      description: 'Vehicles similar to the given vehicle, scored by vector similarity, features, price, mileage, make, fuel type and freshness.',
+      request: { params: s.IdParam, query: s.LimitQuery },
+      responses: { 200: jsonResponse(s.DiscoveryResponse, 'Similar vehicles'), 400: invalid, 404: notFound },
+    }),
+    intent: createRoute({
+      method: 'get', path: '/api/intent', tags: ['Discovery'],
+      summary: 'Random intent feed',
+      description: 'Picks a random intent cluster (user segment) and returns its browse feed. Each call may return a different intent.',
+      request: { query: s.LimitQuery },
+      responses: { 200: jsonResponse(s.IntentResponse, 'Intent label and its browse feed'), 400: invalid },
+    }),
+    recommendations: createRoute({
+      method: 'get', path: '/api/recommendations', tags: ['Discovery'],
+      summary: 'Recommendations or browse feed',
+      description: `Without \`q\`: browse feed for \`cluster\` (default \`${DEFAULT_CLUSTER}\`). With \`q\`: runs a search and derives diversified recommendations from the results.`,
+      request: { query: s.RecommendationsQuery },
+      responses: { 200: jsonResponse(s.RecommendationsResponse, 'Recommended vehicles'), 400: invalid },
+    }),
+    sitemap: createRoute({
+      method: 'get', path: '/api/sitemap', tags: ['Sitemap'],
+      summary: 'All vehicle IDs',
+      description: 'IDs of all active vehicles, used by the frontend to build sitemap.xml.',
+      responses: { 200: jsonResponse(s.SitemapResponse, 'All active vehicle IDs') },
+    }),
+    rawSearch: createRoute({
+      method: 'post', path: '/search', tags: ['Search (POST)'],
+      summary: 'Search with a structured request body',
+      description: 'Lower-level search taking structured filters directly. Returns both the current page and the full reranked candidate pool.',
+      request: { body: jsonBody(s.SearchRequestBody) },
+      responses: { 200: jsonResponse(s.RawSearchResponse, 'Search results'), 400: invalid },
+    }),
+    discoverSimilar: createRoute({
+      method: 'post', path: '/discover/similar', tags: ['Search (POST)'],
+      summary: 'Similar vehicles (POST)',
+      request: { body: jsonBody(s.SimilarRequestBody) },
+      responses: { 200: jsonResponse(s.DiscoveryResponse, 'Similar vehicles'), 400: invalid, 404: notFound },
+    }),
+    discoverRecommendations: createRoute({
+      method: 'post', path: '/discover/recommendations', tags: ['Search (POST)'],
+      summary: 'Recommendations for a search (POST)',
+      request: { body: jsonBody(s.RecommendationsRequestBody) },
+      responses: { 200: jsonResponse(s.DiscoveryResponse, 'Recommended vehicles'), 400: invalid },
+    }),
+  };
+}
+
+/**
+ * Creates the API sub-application containing all JSON-returning endpoints, with request
+ * validation and an OpenAPI 3.1 document at GET /openapi.json generated from the route definitions.
  * @param {Object} state - Application state from buildDemoState.
- * @returns {Hono}
+ * @returns {OpenAPIHono}
  */
 export function createApiRouter(state) {
-  const app = new Hono();
+  const app = new OpenAPIHono({ defaultHook: validationErrorHook });
+  const schemas = createSchemas(state.config);
+  const routes = defineRoutes(schemas);
+  const notFound = (c, id) => c.json({ error: 'Not found', listing_id: id }, 404);
 
-  app.post('/search', async c => {
-    const payload = await c.req.json();
-    return c.json(state.app.search(payload));
-  });
-
-  app.post('/discover/similar', async c => {
-    const payload = await c.req.json();
-    return c.json(state.app.discoverSimilar(payload));
-  });
-
-  app.post('/discover/recommendations', async c => {
-    const payload = await c.req.json();
-    return c.json(state.app.discoverRecommendations(payload));
-  });
-
-  // ── REST API (/api/*) ──────────────────────────────────────────────────────
-  // Intended for consumption by third-party services. All endpoints return JSON.
-  // Existing POST endpoints above remain available alongside these GET routes.
-
-  /** GET /api/vehicles/:id — retrieve a single vehicle document by ID. */
-  app.get('/api/vehicles/:id', c => {
-    const doc = state.app.documentRepository.get(c.req.param('id'));
-    if (!doc) return c.json({ error: 'Not found', listing_id: c.req.param('id') }, 404);
-    return c.json(doc);
-  });
-
-  /** GET /api/vehicles/:id/similar — similar vehicles for a given ID. Query: limit. */
-  app.get('/api/vehicles/:id/similar', c => {
-    const id = c.req.param('id');
-    if (!state.app.documentRepository.get(id)) return c.json({ error: 'Not found', listing_id: id }, 404);
-    const limit = parseInt(c.req.query('limit') || '0') || undefined;
-    return c.json(state.app.discoverSimilar({ listing_id: id, limit }));
-  });
-
-  /**
-   * GET /api/search — full-text and filtered search.
-   * Query params: q, county (repeatable), vehicle_type, max_price, max_mileage, page, page_size.
-   */
-  app.get('/api/search', c => {
-    const p = new URL(c.req.url, 'http://localhost').searchParams;
-    const payload = buildApiSearchPayload(p);
+  app.openapi(routes.search, c => {
+    const payload = buildApiSearchPayload(c.req.valid('query'));
     const result = state.app.search(payload);
     return c.json({
       query: payload.query_text,
@@ -87,44 +150,87 @@ export function createApiRouter(state) {
       hits: result.hits,
       facets: result.facets,
       latency_breakdown: result.latency_breakdown,
-    });
+    }, 200);
   });
 
-  /**
-   * GET /api/recommendations — recommendations for a search or a browse feed when no query.
-   * Query params: q, county (repeatable), vehicle_type, max_price, max_mileage, limit, cluster.
-   * When q is absent: returns a browse feed for the given cluster (default: commuters).
-   * When q is present: runs a search and derives recommendations from the top results.
-   */
-  /** GET /api/sitemap — all vehicle IDs for sitemap generation. */
-  app.get('/api/sitemap', c => {
-    const ids = state.app.documentRepository.list().map(d => d.listing_id);
-    return c.json({ listing_ids: ids });
+  app.openapi(routes.item, c => {
+    const { id } = c.req.valid('param');
+    const doc = state.app.documentRepository.get(id);
+    if (!doc) return notFound(c, id);
+    return c.json(doc, 200);
   });
 
-  /** GET /api/intent — random intent browse feed; query: limit. */
-  app.get('/api/intent', c => {
-    const segments = state.config.behavior.user_segments.map(s => s.name);
+  app.openapi(routes.similar, c => {
+    const { id } = c.req.valid('param');
+    if (!state.app.documentRepository.get(id)) return notFound(c, id);
+    const { limit } = c.req.valid('query');
+    return c.json(state.app.discoverSimilar({ listing_id: id, limit }), 200);
+  });
+
+  app.openapi(routes.intent, c => {
+    const segments = state.config.behavior.user_segments.map(seg => seg.name);
     const cluster = segments[Math.floor(Math.random() * segments.length)];
     const intent = cluster.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
-    const limit = parseInt(c.req.query('limit') || '0') || undefined;
+    const { limit } = c.req.valid('query');
     const result = state.app.browseIntentCluster({ cluster, limit });
-    return c.json({ intent, cluster, hits: result.hits });
+    return c.json({ intent, cluster, hits: result.hits }, 200);
   });
 
-  app.get('/api/recommendations', c => {
-    const p = new URL(c.req.url, 'http://localhost').searchParams;
-    const limit = parseInt(p.get('limit') || '0') || undefined;
-    const queryText = p.get('q') || '';
-    if (!queryText) {
-      const cluster = p.get('cluster') || 'commuters';
+  app.openapi(routes.recommendations, c => {
+    const query = c.req.valid('query');
+    const { limit } = query;
+    if (!query.q) {
+      const cluster = query.cluster || DEFAULT_CLUSTER;
       const result = state.app.browseIntentCluster({ cluster, limit });
-      return c.json({ surface: 'browse', cluster, hits: result.hits });
+      return c.json({ surface: 'browse', cluster, hits: result.hits }, 200);
     }
-    const payload = buildApiSearchPayload(p);
+    const payload = buildApiSearchPayload(query);
     const searchResult = state.app.search(payload);
     const recs = state.app.discoverRecommendations({ ...payload, limit }, searchResult.rerankedHits);
-    return c.json({ surface: 'search_recommendations', query: queryText, hits: recs.hits });
+    return c.json({ surface: 'search_recommendations', query: query.q, hits: recs.hits }, 200);
+  });
+
+  app.openapi(routes.sitemap, c => {
+    const ids = state.app.documentRepository.list().map(d => d.listing_id);
+    return c.json({ listing_ids: ids }, 200);
+  });
+
+  app.openapi(routes.rawSearch, c => c.json(state.app.search(c.req.valid('json')), 200));
+
+  app.openapi(routes.discoverSimilar, c => {
+    const payload = c.req.valid('json');
+    if (!state.app.documentRepository.get(payload.listing_id)) return notFound(c, payload.listing_id);
+    return c.json(state.app.discoverSimilar(payload), 200);
+  });
+
+  app.openapi(routes.discoverRecommendations, c => c.json(state.app.discoverRecommendations(c.req.valid('json')), 200));
+
+  // /health is served by server.js (it must answer before state is ready); document it here.
+  app.openAPIRegistry.registerPath({
+    method: 'get', path: '/health', tags: ['System'],
+    summary: 'Health check',
+    description: 'Returns 200 once demo state is built, 503 while the service is starting.',
+    responses: {
+      200: jsonResponse(schemas.HealthResponse, 'Service is ready'),
+      503: jsonResponse(schemas.HealthResponse, 'Service is still building its data'),
+    },
+  });
+
+  app.doc31('/openapi.json', {
+    openapi: '3.1.0',
+    info: {
+      title: SERVICE_NAME,
+      version: SERVICE_VERSION,
+      description: 'Synthetic vehicle listings: search, vehicle detail, similar vehicles, intent feeds and recommendations. All data is generated from a fixed seed; no real VINs, registration plates, dealers or people. Interactive docs: [/docs](/docs).',
+    },
+    tags: [
+      { name: 'Search', description: 'Query-parameter based search' },
+      { name: 'Vehicles', description: 'Single vehicles and similar vehicles' },
+      { name: 'Discovery', description: 'Intent feeds and recommendations' },
+      { name: 'Sitemap', description: 'Bulk ID listing' },
+      { name: 'Search (POST)', description: 'Lower-level endpoints taking structured JSON bodies' },
+      { name: 'System', description: 'Operational endpoints' },
+    ],
   });
 
   return app;

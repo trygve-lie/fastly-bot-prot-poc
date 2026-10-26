@@ -6,6 +6,7 @@ export { homePage }           from './pages/home.js';
 export { intentVerticalPage, apiSearchPage } from './pages/realestate.js';
 export { realestateItemPage }     from './pages/realestate-item.js';
 export { mobilityItemPage }       from './pages/mobility-item.js';
+export { recommerceItemPage }     from './pages/recommerce-item.js';
 export { verticalPage }  from './pages/vertical.js';
 export { searchPage }    from './pages/search.js';
 export { itemPage }      from './pages/item.js';

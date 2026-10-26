@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { Scalar } from '@scalar/hono-api-reference';
 import { serve } from '@hono/node-server';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -145,6 +146,7 @@ async function main() {
       console.log('Demo state ready.');
 
       app.route('/', createApiRouter(state));
+      app.get('/docs', Scalar({ url: '/openapi.json', pageTitle: 'api-mobility API reference' }));
       app.route('/', createFrontendRouter(state));
 
       if (!state.evaluationSummary) {

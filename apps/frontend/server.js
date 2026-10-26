@@ -10,11 +10,13 @@ import {
   intentVerticalPage, apiSearchPage,
   realestateItemPage,
   mobilityItemPage,
+  recommerceItemPage,
 } from './templates/index.js';
 
 
 const apiMobilityBase   = process.env.API_MOBILITY_URL   ? `http://${process.env.API_MOBILITY_URL}`   : 'http://localhost:3001';
 const apiRealestateBase = process.env.API_REALESTATE_URL ? `http://${process.env.API_REALESTATE_URL}` : 'http://localhost:3002';
+const apiRecommerceBase = process.env.API_RECOMMERCE_URL ? `http://${process.env.API_RECOMMERCE_URL}` : 'http://localhost:3003';
 
 const app = new Hono();
 
@@ -67,33 +69,6 @@ const VERTICALS = {
         tags: ['Hybrid', 'Tech'],
         description: 'Build scalable APIs and data pipelines in Go and Kotlin. You will own services end-to-end from design to production.',
         seller: 'Telenor', memberSince: '2003',
-      },
-    ],
-  },
-  recommerce: {
-    name: 'Recommerce', icon: 'recycle', slug: 'recommerce',
-    description: 'Buy and sell second-hand electronics, furniture, sport and more.',
-    listings: [
-      {
-        id: '10', title: 'iPhone 14 Pro 256 GB', location: 'Oslo',
-        price: '7 500 kr', meta: 'Like new · Electronics',
-        tags: ['Like new', 'Electronics'],
-        description: 'Deep Purple, bought in January 2023. Comes with original box, two cases and a MagSafe charger. Battery health 97%.',
-        seller: 'Anna Dahl', memberSince: '2021',
-      },
-      {
-        id: '11', title: 'IKEA Kallax 4×4', location: 'Bergen',
-        price: '450 kr', meta: 'Good condition · Furniture',
-        tags: ['Good condition', 'Furniture'],
-        description: 'White Kallax shelf unit, 147×147 cm. Small scratch on the base, otherwise in good shape. Buyer must collect.',
-        seller: 'Tor Nilsen', memberSince: '2023',
-      },
-      {
-        id: '12', title: 'Trek Marlin 7 (2021)', location: 'Stavanger',
-        price: '3 200 kr', meta: 'Good condition · Sport',
-        tags: ['Good condition', 'Sport'],
-        description: 'Size L mountain bike. New brake pads and fresh tyres fitted this spring. Comes with bottle cage and rear rack.',
-        seller: 'Hilde Moe', memberSince: '2020',
       },
     ],
   },
@@ -150,6 +125,7 @@ app.get('/sitemap.xml', (c) => {
     `${origin}/sitemap-static.xml`,
     `${origin}/sitemap-realestate.xml`,
     `${origin}/sitemap-mobility.xml`,
+    `${origin}/sitemap-recommerce.xml`,
   ];
 
   const entries = sitemaps.map(loc => `  <sitemap>
@@ -260,26 +236,57 @@ ${entries}
 </urlset>`);
 });
 
+// Recommerce item pages — all item IDs fetched from api-recommerce.
+app.get('/sitemap-recommerce.xml', async (c) => {
+  const origin = publicOrigin(c);
+  const today  = new Date().toISOString().slice(0, 10);
+
+  let ids = [];
+  try {
+    const data = await fetch(`${apiRecommerceBase}/api/sitemap`).then(r => r.json());
+    ids = data.listing_ids ?? [];
+  } catch (_) {}
+
+  const entries = ids.map(id => `  <url>
+    <loc>${origin}/recommerce/item/${id}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`).join('\n');
+
+  c.header('Content-Type', 'application/xml');
+  c.header('Cache-Control', 'public, max-age=3600');
+  c.header('Surrogate-Control', 'max-age=86400, stale-while-revalidate=3600');
+  c.header('Surrogate-Key', 'sitemap recommerce');
+  return c.body(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entries}
+</urlset>`);
+});
+
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
 
 app.get('/services', async (c) => {
   c.header('Cache-Control', 'no-store');
-  const [mobility, realestate] = await Promise.all([
+  const [mobility, realestate, recommerce] = await Promise.all([
     fetch(`${apiMobilityBase}/api/search`).then(r => r.json()),
     fetch(`${apiRealestateBase}/api/search`).then(r => r.json()),
+    fetch(`${apiRecommerceBase}/api/search`).then(r => r.json()),
   ]);
-  return c.json({ mobility, realestate });
+  return c.json({ mobility, realestate, recommerce });
 });
 
 app.get('/', async (c) => {
   c.header('Cache-Control', 'public, max-age=30');
   c.header('Surrogate-Control', 'max-age=60, stale-while-revalidate=10');
-  const useRealestate = Math.random() < 0.5;
-  const apiBase  = useRealestate ? apiRealestateBase : apiMobilityBase;
-  const slug     = useRealestate ? 'realestate' : 'mobility';
-  const typeKey  = useRealestate ? 'property_type' : 'vehicle_type';
+  const sources = [
+    { apiBase: apiRealestateBase, slug: 'realestate', typeKey: 'property_type' },
+    { apiBase: apiMobilityBase,   slug: 'mobility',   typeKey: 'vehicle_type' },
+    { apiBase: apiRecommerceBase, slug: 'recommerce', typeKey: 'category_label' },
+  ];
+  const { apiBase, slug, typeKey } = sources[Math.floor(Math.random() * sources.length)];
   let intent = '', items = [];
   try {
     const data = await fetch(`${apiBase}/api/intent?limit=10`).then(r => r.json());
@@ -412,21 +419,53 @@ app.get('/job/item/:id', (c) => {
   }));
 });
 
-// recommerce
-app.get('/recommerce', (c) => c.html(subPageLayout(VERTICALS.recommerce.name, verticalPage(VERTICALS.recommerce), '/', {
-  description: VERTICALS.recommerce.description,
-})));
-app.get('/recommerce/search', (c) => {
-  const query = c.req.query('q') || '';
-  return c.html(subPageLayout(`Search ${VERTICALS.recommerce.name}`, searchPage(VERTICALS.recommerce, query), '/recommerce', {
-    description: `Search recommerce listings${query ? ` for "${query}"` : ''}.`,
-  }));
+// recommerce — home is API-driven; search and item fetch from api-recommerce
+app.get('/recommerce', async (c) => {
+  c.header('Cache-Control', 'public, max-age=30');
+  c.header('Surrogate-Control', 'max-age=60, stale-while-revalidate=10');
+  c.header('Surrogate-Key', 'recommerce');
+  let intent = '', items = [];
+  try {
+    const data = await fetch(`${apiRecommerceBase}/api/intent?limit=10`).then(r => r.json());
+    intent = data.intent ?? '';
+    items = data.hits ?? [];
+  } catch (_) {}
+  return c.html(subPageLayout('Recommerce', intentVerticalPage({
+    icon: 'recycle', name: 'Recommerce', slug: 'recommerce',
+    intentLabel: intent, items, typeKey: 'category_label',
+  }), '/', { description: 'Buy and sell second-hand electronics, furniture, clothing, sports gear and more.' }));
 });
-app.get('/recommerce/item/:id', (c) => {
-  const entry = ALL_LISTINGS[c.req.param('id')];
-  if (!entry || entry.vertical.slug !== 'recommerce') return c.notFound();
-  return c.html(subPageLayout(entry.listing.title, itemPage(entry.vertical, entry.listing), '/recommerce/search', {
-    description: entry.listing.description,
+app.get('/recommerce/search', async (c) => {
+  c.header('Cache-Control', 'public, max-age=60');
+  c.header('Surrogate-Control', 'max-age=300, stale-while-revalidate=30');
+  c.header('Surrogate-Key', 'recommerce recommerce-search');
+  const query = c.req.query('q') || '';
+  let hits = [];
+  try {
+    const data = await fetch(`${apiRecommerceBase}/api/search?q=${encodeURIComponent(query)}`).then(r => r.json());
+    hits = data.hits ?? [];
+  } catch (_) {}
+  return c.html(subPageLayout('Search Recommerce', apiSearchPage({
+    name: 'Recommerce', slug: 'recommerce', query, hits, typeKey: 'category_label',
+  }), '/recommerce', { description: `Search second-hand listings${query ? ` for "${query}"` : ''}.` }));
+});
+app.get('/recommerce/item/:id', async (c) => {
+  c.header('Cache-Control', 'public, max-age=60');
+  c.header('Surrogate-Control', 'max-age=600, stale-while-revalidate=60');
+  c.header('Surrogate-Key', `recommerce recommerce-item-${c.req.param('id')}`);
+  const id = c.req.param('id');
+  let item = null, similar = [];
+  try {
+    const [itemRes, simRes] = await Promise.all([
+      fetch(`${apiRecommerceBase}/api/items/${encodeURIComponent(id)}`),
+      fetch(`${apiRecommerceBase}/api/items/${encodeURIComponent(id)}/similar?limit=5`),
+    ]);
+    if (itemRes.ok) item = await itemRes.json();
+    if (simRes.ok) similar = (await simRes.json()).hits ?? [];
+  } catch (_) {}
+  if (!item) return c.notFound();
+  return c.html(subPageLayout(item.title, recommerceItemPage(item, similar), '/recommerce/search', {
+    description: item.text,
   }));
 });
 

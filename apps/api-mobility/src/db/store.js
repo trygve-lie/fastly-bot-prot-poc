@@ -102,7 +102,6 @@ CREATE VIRTUAL TABLE IF NOT EXISTS vehicles_fts USING fts5(
   listing_id UNINDEXED,
   county UNINDEXED,
   text_content,
-  content='',
   tokenize='unicode61'
 );
 
@@ -125,12 +124,14 @@ export function openStore(dbPath) {
   db.exec(SCHEMA);
   db.exec('PRAGMA journal_mode=WAL');
 
-  // Rebuild FTS5 table if county column is missing (schema upgrade)
+  // Rebuild the FTS5 table if it is missing columns or was created contentless
+  // (a contentless table returns NULL for listing_id, which breaks the lexical join).
   try {
-    db.prepare('SELECT county FROM vehicles_fts LIMIT 0').all();
+    const sample = db.prepare('SELECT listing_id, county FROM vehicles_fts LIMIT 1').get();
+    if (sample && sample.listing_id == null) throw new Error('contentless FTS table');
   } catch (_) {
     db.exec('DROP TABLE IF EXISTS vehicles_fts');
-    db.exec("CREATE VIRTUAL TABLE vehicles_fts USING fts5(listing_id UNINDEXED, county UNINDEXED, text_content, content='', tokenize='unicode61')");
+    db.exec("CREATE VIRTUAL TABLE vehicles_fts USING fts5(listing_id UNINDEXED, county UNINDEXED, text_content, tokenize='unicode61')");
   }
 
   // Migrations for existing databases

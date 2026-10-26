@@ -1,0 +1,18 @@
+{
+  "name": "api-recommerce",
+  "version": "1.0.0",
+  "description": "Synthetic recommerce (second-hand goods) search and discovery prototype",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "images:generate": "node tools/generate-images/generate.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.5",
+    "@hono/zod-openapi": "1.6.3",
+    "@scalar/hono-api-reference": "0.12.14",
+    "hono": "4.13.14",
+    "zod": "4.6.7"
+  }
+}

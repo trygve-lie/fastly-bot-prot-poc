@@ -1,5 +1,11 @@
 # SQLite databases
 *.db
+*.db-shm
+*.db-wal
+
+# Generated images (apps/*/images) are committed and deployed with the service; only ignore
+# the image tool's temporary manifest file.
+apps/*/images/manifest.json.tmp
 
 # Logs
 logs
