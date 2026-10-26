@@ -155,6 +155,10 @@ Tables: `runs`, `items`, `items_fts`, `sessions`, `queries`, `ranking_labels`, `
 - All JSON-returning routes belong in `src/routes/api.js`; all HTML in `src/routes/frontend.js`; `src/server.js` is the orchestrator only.
 - The store stays open for the server's lifetime — do not call `store.close()` inside request handlers.
 
+## CORS
+
+The API is open to every origin. `src/server.js` registers Hono's built-in `cors()` middleware first, for all routes: `Access-Control-Allow-Origin: *`, methods `GET, POST, OPTIONS`, header `Content-Type`, preflights cached for 24h, no credentials. Because it's registered first, preflights and the startup 503s also get CORS headers. Keep the API free of cookies and auth while it stays open like this.
+
 ## API Documentation (OpenAPI)
 
 - `src/routes/api.js` is an `OpenAPIHono` router (`@hono/zod-openapi`). Every route is declared with `createRoute()` in `defineRoutes()` and registered with `app.openapi(route, handler)`.

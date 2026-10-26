@@ -247,7 +247,7 @@ Defined in `render.yaml` at the repo root. Any change to this file takes effect 
 
 All services: `region: frankfurt`, `NODE_VERSION: 24`, `buildCommand: npm install`.
 
-**api-mobility and api-realestate are private services** and aren't publicly reachable. **api-recommerce is a public web service** with `healthCheckPath: /health`: its API, `/docs`, demo UI and `/images/*` are reachable on its `onrender.com` URL. The frontend reaches all three over Render's internal network (`API_MOBILITY_URL`, `API_REALESTATE_URL` and `API_RECOMMERCE_URL`, injected via `fromService: hostport`; the recommerce entry uses `type: web`). To make recommerce private later: set `type: pserv`, remove `healthCheckPath`, set `fromService.type: pserv`, then delete the service on Render and re-sync, because a service's type can't be changed in place.
+**api-mobility and api-realestate are private services** and aren't publicly reachable. **api-recommerce is a public web service** with `healthCheckPath: /health` and open CORS (`hono/cors`, any origin): its API, `/docs`, demo UI and `/images/*` are reachable on its `onrender.com` URL. The frontend reaches all three over Render's internal network (`API_MOBILITY_URL`, `API_REALESTATE_URL` and `API_RECOMMERCE_URL`, injected via `fromService: hostport`; the recommerce entry uses `type: web`). To make recommerce private later: set `type: pserv`, remove `healthCheckPath`, set `fromService.type: pserv`, then delete the service on Render and re-sync, because a service's type can't be changed in place.
 
 **Persistent disks** on all three API services at `/data` (1GB each). `data.db` is written there so warm starts survive deploys. If schema changes require a cold start, delete `/data/data.db` via the Render Shell tab.
 

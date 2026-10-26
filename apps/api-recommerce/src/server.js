@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { Scalar } from '@scalar/hono-api-reference';
 import { serve } from '@hono/node-server';
 import { resolve, dirname } from 'node:path';
@@ -147,6 +148,9 @@ async function main() {
   process.on('SIGINT', shutdown);
 
   const app = new Hono();
+  // Public, read-only API: any origin may call it from the browser (no cookies or credentials).
+  // Registered first so preflights and 503 responses during startup also carry CORS headers.
+  app.use('*', cors({ origin: '*', allowMethods: ['GET', 'POST', 'OPTIONS'], allowHeaders: ['Content-Type'], maxAge: 86400 }));
   app.get('/health', c => c.json({ status: state ? 'ok' : 'starting' }, state ? 200 : 503));
   app.use('*', (c, next) => {
     if (!state) return c.json({ error: 'Service is starting, please retry shortly' }, 503);
