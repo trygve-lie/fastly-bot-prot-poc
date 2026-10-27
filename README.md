@@ -137,7 +137,8 @@ GET /api/intent, /api/recommendations, /api/sitemap  (same pattern)
 ### Recommerce endpoints
 
 ```
-GET /api/search          ?q, county, category, subcategory, brand, condition, max_price, shipping=true
+GET /api/search          ?q, county, category, subcategory, brand, condition, min_price, max_price,
+                          lat, lng, radius_km, shipping=true, sort=relevance|newest
 GET /api/items/:id
 GET /api/items/:id/similar
 GET /api/intent, /api/recommendations, /api/sitemap  (same pattern)
@@ -145,11 +146,11 @@ GET /api/intent, /api/recommendations, /api/sitemap  (same pattern)
 
 Recommerce covers 13 categories — electronics, computers & gaming, home appliances, furniture, home decor, clothing, shoes & accessories, kids & baby, sports & outdoors, hobbies & music, books & media, antiques & collectibles, garden & tools — with real product brands (Apple, IKEA, Fjällräven, Stokke, Trek, Fender, Husqvarna, …). Sellers, shops and locations are synthetic.
 
-Every recommerce item and hit also has:
+Every listing, vehicle and item (and every search, similar, intent and recommendation hit) in all three API services has:
 
 | Field | Example | Notes |
 |---|---|---|
-| `images` | `[{ "url": "/images/b99b9c33….jpg", "alt": "Stokke Xplory", "width": 1024, "height": 768 }]` | AI-generated photos served by the service at `GET /images/:file`; `[]` when an item has none |
+| `images` | `[{ "url": "/images/b99b9c33….jpg", "alt": "Stokke Xplory", "width": 1024, "height": 768 }]` | **api-recommerce only.** AI-generated photos served by the service at `GET /images/:file`; `[]` when an item has none |
 | `location` | `{ "lat": 59.923, "lng": 10.761, "area": "Grünerløkka", "precision": "approximate" }` | Rounded to ~100 m, inside a populated area of the municipality; never an exact address |
 | `published_at` | `"2026-10-24T20:14:00+02:00"` | ISO 8601, Norwegian local time; relative to today (the ad keeps its age, the date rolls forward daily) |
 

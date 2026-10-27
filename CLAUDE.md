@@ -202,7 +202,7 @@ All three services expose the same pattern under different entity names:
 | `GET /openapi.json` | OpenAPI 3.1 document generated from the route definitions |
 | `GET /docs` | Interactive API reference (Scalar) rendered from `/openapi.json` |
 
-api-recommerce also adds `location: {lat, lng, area, precision}` (approximate, within a populated area of the municipality) and `published_at` (ISO 8601, relative to today) to every item and hit. See its `AGENTS.md`.
+All three services add `location: {lat, lng, area, precision}` (approximate, within a populated area of the municipality) and `published_at` (ISO 8601, relative to today) to every item and hit. api-recommerce also adds `images`. The generation modules (`src/generation/geo.js`, `published.js`, `seed.js`, `derived.js`) are identical copies in each service; keep them in sync. See each service's `AGENTS.md`.
 
 ### Search filter params (api-realestate)
 `q`, `county` (repeatable), `property_type`, `max_price`, `min_bedrooms`
@@ -211,7 +211,7 @@ api-recommerce also adds `location: {lat, lng, area, precision}` (approximate, w
 `q`, `county` (repeatable), `vehicle_type`, `fuel_type`, `max_price`, `max_mileage`
 
 ### Search filter params (api-recommerce)
-`q`, `county` (repeatable), `category`, `subcategory`, `brand`, `condition`, `max_price`, `shipping=true`
+`q`, `county` (repeatable), `category`, `subcategory`, `brand`, `condition`, `min_price`, `max_price`, `lat` + `lng` + `radius_km` (geo radius; hits get `distance_km`), `shipping=true`, `sort=relevance|newest`
 
 ### Full-text search (FTS5)
 The `*_fts` tables (`listings_fts`, `vehicles_fts`, `items_fts`) store `listing_id` (they are not contentless), so BM25 scores join back to documents. The MATCH expression ORs the query tokens with their Norwegian/English synonym expansions (`buildFtsQuery` in `search/backend.js`, identical in all three services). `openStore` detects an old contentless table and rebuilds it automatically on startup.

@@ -127,7 +127,7 @@ IDs follow the pattern of the other services: `itm-<seed>-<sequence>`, e.g. `itm
 | `POST` | `/discover/recommendations` | Recommendations — same body as `/search` plus optional `limit` |
 | `GET` | `/api/items/:id` | Single item document; `404` if not found |
 | `GET` | `/api/items/:id/similar` | Similar items; query: `limit` |
-| `GET` | `/api/search` | Search; query: `q`, `county` (repeatable), `category`, `subcategory`, `brand`, `condition`, `max_price`, `shipping=true`, `page`, `page_size` |
+| `GET` | `/api/search` | Search; query: `q`, `county` (repeatable), `category`, `subcategory`, `brand`, `condition`, `min_price`, `max_price`, `lat` + `lng` + `radius_km`, `shipping=true`, `sort` (`relevance`/`newest`), `page`, `page_size` |
 | `GET` | `/api/intent` | Random intent browse feed; query: `limit` → `{intent, cluster, hits}` |
 | `GET` | `/api/recommendations` | Browse feed when no `q` (query: `cluster`, `limit`; default `bargain_hunters`); search-derived recommendations when `q` is present |
 | `GET` | `/api/sitemap` | All item IDs → `{listing_ids}` |
@@ -170,11 +170,21 @@ The API is open to every origin. `src/server.js` registers Hono's built-in `cors
 
 ## Location and Publish Time
 
+api-realestate and api-mobility have copies of these modules (`geo.js`, `published.js`, `seed.js`, `derived.js`); keep them in sync.
+
 - **Location.** `src/generation/geo.js` has a few populated areas per municipality (district or town centres, radius 0.4–0.9 km, weight). Each listing gets a point in a weighted area, denser towards its centre, rounded to 3 decimals (~100 m). Area centres are public place centres, never addresses. The privacy report warns (`geo_outside_area`) if a point falls outside its municipality's areas.
-- **Publish time.** `src/generation/published.js` gives each listing a local publish minute (evening peak, quiet nights). The API builds `published_at` relative to today: `days_on_market` days ago at that minute, in Europe/Oslo time with offset. The date rolls forward daily, and ads published "today" are never placed in the future.
+- **Publish time.** `src/generation/published.js` gives each listing a local publish minute (evening peak, quiet nights). The API builds `published_at` relative to today: `days_on_market` days ago at that minute, in Europe/Oslo time with offset. The date rolls forward daily. For ads published "today", the publish minute is scaled into the part of the day that has passed, so they're never in the future and don't bunch up on the current time.
 - **Separate RNG streams.** Both are derived only from `listing_id` (+ municipality), each with its own RNG seeded via `seedFromString()`. `buildItem()` still draws the two RNG values of the old bounding-box sampler, so all other generated fields, and the image mapping, are unchanged. Don't remove those draws.
 - **Stored and versioned.** `latitude`, `longitude`, `location_area` and `publish_minute` are columns on `items`. `runs.derived_version` records `DERIVED_FIELDS_VERSION` (`src/generation/derived.js`). When it differs, startup recomputes the fields in place and rebuilds the privacy report, with no regeneration. Bump the version after changing areas or the time distribution.
 - **API.** Every item and hit has `location: { lat, lng, area, precision: 'approximate' }` and `published_at`. They're added in `routes/api.js` from `state.listingMeta`, not stored in the search documents, so the search index and embeddings are unaffected. `location_cluster` is unrelated to the position and unchanged.
+
+### Geo, price and newest-first search
+
+- **Price:** `min_price` / `max_price` become `total_price` `gte` / `lte` filters. `min_price > max_price` is a 400.
+- **Radius:** `lat` + `lng` + `radius_km` (all three or none, radius up to 500 km) become `geo` on the search request. The backend drops candidates outside the radius before scoring, so facets and counts reflect the radius. Hits get `distance_km`, and the reranker's geo fit is `1 - distance / radius`. `POST /search` takes `geo: { lat, lng, radius_km }` directly.
+- **Newest first:** `sort=newest` orders by `days_on_market` ascending, then `publish_minute` descending (`compareRecency` in `src/search/geoAndRecency.js`). It's applied before the 50-candidate pool is cut, so the pool holds the newest matches, and again after reranking. With a text query it only keeps real keyword or synonym matches (lexical score > 0), because vector similarity alone matches almost everything.
+- The search documents carry `latitude`, `longitude` and `publish_minute` for this. They're not part of the search text or embeddings, and `routes/api.js` strips them from responses in favour of `location` / `published_at`.
+- `/api/recommendations?q=` accepts the same price and radius parameters, but not `sort`.
 
 ## Item Images
 

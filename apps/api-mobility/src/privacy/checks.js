@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { isWithinMunicipalityAreas } from '../generation/geo.js';
 
 const PHONE_RE = /\b(?:\+47\s?)?\d{8}\b/;
 const EMAIL_RE = /\b\S+@\S+\.\S+\b/;
@@ -42,6 +43,9 @@ export function buildPrivacyReport(vehicles, configHash, seed) {
   let schemaValidationErrors = 0;
 
   for (const vehicle of vehicles) {
+    if (vehicle.latitude != null && !isWithinMunicipalityAreas(vehicle.municipality, vehicle.latitude, vehicle.longitude)) {
+      warnings.push({ warning_type: 'geo_outside_area', severity: 'medium', listing_id: vehicle.listing_id, field_name: 'latitude/longitude', message: `Position is outside the populated areas of ${vehicle.municipality}` });
+    }
     for (const fieldName of ['title', 'text', 'description_synthetic']) {
       const text = vehicle[fieldName];
       warnings.push(...scanTextPatterns(vehicle, fieldName, text));

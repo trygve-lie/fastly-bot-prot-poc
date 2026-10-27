@@ -1,4 +1,5 @@
 import { createRng } from '../rng.js';
+import { derivedFields } from './derived.js';
 import { createVehicle } from '../schema/vehicle.js';
 import { buildTitle, buildText, buildDescription, MAKES_AND_MODELS } from './text.js';
 import { buildPrivacyReport } from '../privacy/checks.js';
@@ -20,39 +21,12 @@ const LISTING_STATUS_WEIGHTS = [0.08, 0.68, 0.19, 0.05];
 
 const ALL_FEATURES = ['sunroof', 'tow_hitch', 'winter_wheels', 'leather_seats', 'heated_seats', 'navigation', 'cruise_control', 'apple_carplay', 'parking_sensors', 'blind_spot_warning', 'lane_assist', 'rear_camera'];
 
-const MUNICIPALITY_BOUNDS = {
-  Oslo:         [59.850, 59.970, 10.650, 10.850],
-  Bergen:       [60.350, 60.450, 5.250,  5.400],
-  Askoy:        [60.380, 60.480, 5.100,  5.250],
-  Alver:        [60.500, 60.600, 5.300,  5.500],
-  Trondheim:    [63.350, 63.450, 10.350, 10.550],
-  Malvik:       [63.400, 63.500, 10.600, 10.800],
-  Melhus:       [63.250, 63.350, 10.200, 10.400],
-  Stavanger:    [58.950, 59.050, 5.650,  5.800],
-  Sandnes:      [58.830, 58.930, 5.700,  5.850],
-  Sola:         [58.850, 58.920, 5.600,  5.720],
-  Kristiansand: [58.120, 58.200, 7.950,  8.100],
-  Lillesand:    [58.230, 58.300, 8.350,  8.500],
-  Arendal:      [58.430, 58.500, 8.720,  8.850],
-  Bodo:         [67.260, 67.320, 14.350, 14.550],
-  Narvik:       [68.410, 68.470, 17.380, 17.550],
-  Sortland:     [68.680, 68.740, 15.400, 15.550],
-};
-
-/**
- * Returns a random [lat, lng] pair within a municipality's bounding box, or [null, null].
- * @param {string} municipality
- * @param {import('../rng.js').Rng} rng
- * @returns {[number|null, number|null]}
- */
-function sampleGeoPosition(municipality, rng) {
-  const bounds = MUNICIPALITY_BOUNDS[municipality];
-  if (!bounds) return [null, null];
-  const [latMin, latMax, lngMin, lngMax] = bounds;
-  const lat = Math.round((latMin + rng.random() * (latMax - latMin)) * 1e6) / 1e6;
-  const lng = Math.round((lngMin + rng.random() * (lngMax - lngMin)) * 1e6) / 1e6;
-  return [lat, lng];
-}
+// Municipalities that drew two RNG values for a (now replaced) bounding-box position. The draws are
+// kept so every other generated field stays identical.
+const LEGACY_GEO_MUNICIPALITIES = new Set([
+  'Oslo', 'Bergen', 'Askoy', 'Alver', 'Trondheim', 'Malvik', 'Melhus', 'Stavanger', 'Sandnes', 'Sola',
+  'Kristiansand', 'Lillesand', 'Arendal', 'Bodo', 'Narvik', 'Sortland',
+]);
 
 /**
  * Selects a county by weighted sampling from the config.
@@ -306,7 +280,7 @@ export function buildVehicle(config, rng, sequenceNumber, snapshotDate, listingS
   const has_heated_seats = featureTags.includes('heated_seats');
   const has_navigation = featureTags.includes('navigation');
 
-  const [latitude, longitude] = sampleGeoPosition(municipality, rng);
+  if (LEGACY_GEO_MUNICIPALITIES.has(municipality)) { rng.random(); rng.random(); }
 
   const partialAttrs = {
     listing_id,
@@ -389,8 +363,7 @@ export function buildVehicle(config, rng, sequenceNumber, snapshotDate, listingS
     description_synthetic,
     feature_tags: featureTags,
     image_stub_ids,
-    latitude,
-    longitude,
+    ...derivedFields(listing_id, municipality),
   });
 }
 

@@ -5,6 +5,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config.js';
 import { generateVehicles, buildSummary } from './generation/vehicles.js';
+import { derivedFields, DERIVED_FIELDS_VERSION } from './generation/derived.js';
 import { generateSessions, buildBehaviorSummary } from './generation/behavior.js';
 import { createSearchApplication } from './search/application.js';
 import { buildPrivacyReport } from './privacy/checks.js';
@@ -50,6 +51,16 @@ function buildDemoState(config, dbPath) {
     existingRun = { run_id: runId };
   }
 
+  // Position, area and publish minute are derived from listing_id + municipality only. Recompute them
+  // in place when the stored version is outdated (also fills them on databases created before they existed).
+  let derivedUpdated = false;
+  if (existingRun.derived_version !== DERIVED_FIELDS_VERSION) {
+    console.log(`Updating geo positions and publish times (derived fields v${DERIVED_FIELDS_VERSION})…`);
+    for (const vehicle of vehicles) Object.assign(vehicle, derivedFields(vehicle.listing_id, vehicle.municipality));
+    store.updateDerivedFields(vehicles, runId, DERIVED_FIELDS_VERSION);
+    derivedUpdated = true;
+  }
+
   let behavior;
   if (store.hasBehavior(runId)) {
     console.log('Loading behavior from SQLite…');
@@ -64,7 +75,7 @@ function buildDemoState(config, dbPath) {
 
   // Load or compute privacy report
   let privacySummary;
-  if (existingRun.privacy_json) {
+  if (existingRun.privacy_json && !derivedUpdated) {
     privacySummary = JSON.parse(existingRun.privacy_json);
   } else {
     privacySummary = buildPrivacyReport(vehicles, configHash, config.seed);
@@ -99,7 +110,13 @@ function buildDemoState(config, dbPath) {
     store.saveFTS(ftsEntries);
   }
 
-  return { config, app, store, runId, vehicles, behavior, vehiclesSummary, privacySummary, evaluationSummary };
+  // Per-listing fields the API adds to vehicles and hits (kept out of the search documents).
+  const listingMeta = new Map(vehicles.map(it => [it.listing_id, {
+    latitude: it.latitude, longitude: it.longitude, location_area: it.location_area,
+    publish_minute: it.publish_minute, days_on_market: it.days_on_market,
+  }]));
+
+  return { config, app, store, runId, vehicles, behavior, vehiclesSummary, privacySummary, evaluationSummary, listingMeta };
 }
 
 /**

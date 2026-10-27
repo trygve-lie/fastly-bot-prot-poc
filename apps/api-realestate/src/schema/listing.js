@@ -48,8 +48,10 @@ const ADDRESS_RE = /\b\d{1,4}\s+[A-Za-zÆØÅæøå]+(?:\s+[A-Za-zÆØÅæøå]+
  * @property {string} description_synthetic
  * @property {string[]} amenity_tags
  * @property {string[]} image_stub_ids
- * @property {number|null} latitude
+ * @property {number|null} latitude - Approximate (~100 m), inside a populated area of the municipality
  * @property {number|null} longitude
+ * @property {string|null} location_area - Name of that populated area (district or town centre)
+ * @property {number} publish_minute - Local minute of the day (0-1439) the ad was published
  */
 
 /**

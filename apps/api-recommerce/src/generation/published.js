@@ -25,8 +25,9 @@ export function samplePublishMinute(listingId) {
 
 /**
  * Builds the publish timestamp relative to today: an ad keeps a fixed age (days_on_market days
- * ago at its publish minute) and the date rolls forward every day. Ads published "today" are
- * never placed in the future.
+ * ago at its publish minute) and the date rolls forward every day. For ads published "today" the
+ * publish minute is scaled into the part of the day that has passed, so they are never in the
+ * future, keep their relative order and don't all collapse onto the current time.
  * @param {number} daysOnMarket
  * @param {number} publishMinute
  * @param {Date} [now]
@@ -35,7 +36,7 @@ export function samplePublishMinute(listingId) {
 export function publishedAt(daysOnMarket, publishMinute, now = new Date()) {
   const today = localParts(now);
   const nowMinute = today.hour * 60 + today.minute;
-  const minute = daysOnMarket === 0 ? Math.min(publishMinute, nowMinute) : publishMinute;
+  const minute = daysOnMarket === 0 ? Math.floor(publishMinute * nowMinute / 1440) : publishMinute;
   const day = new Date(Date.UTC(today.year, today.month - 1, today.day - daysOnMarket));
   const [y, m, d] = [day.getUTCFullYear(), day.getUTCMonth() + 1, day.getUTCDate()];
   const hh = Math.floor(minute / 60);

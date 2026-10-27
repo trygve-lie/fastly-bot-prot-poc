@@ -1,3 +1,4 @@
+import { distanceKm } from './geoAndRecency.js';
 
 /**
  * Computes the fraction of request filters satisfied by a document.
@@ -30,6 +31,7 @@ function filterMatchScore(doc, request) {
  * @returns {number}
  */
 function geoFitScore(doc, queryTerms, request) {
+  if (request.geo && doc.latitude != null) return Math.max(0.0, 1 - distanceKm(request.geo, doc) / request.geo.radius_km);
   const ctx = request.profile_context || {};
   if (ctx.target_municipality === doc.municipality) return 1.0;
   if (ctx.target_county === doc.county) return 0.85;

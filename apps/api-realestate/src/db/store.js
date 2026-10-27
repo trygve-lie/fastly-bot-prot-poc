@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS listings (
   image_stub_ids TEXT,
   latitude REAL,
   longitude REAL,
+  location_area TEXT,
+  publish_minute INTEGER,
   embedding TEXT,
   run_id TEXT
 );
@@ -93,7 +95,8 @@ CREATE TABLE IF NOT EXISTS runs (
   listing_count INTEGER,
   summary_json TEXT,
   evaluation_json TEXT,
-  privacy_json TEXT
+  privacy_json TEXT,
+  derived_version INTEGER
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS listings_fts USING fts5(
@@ -145,10 +148,10 @@ export function openStore(dbPath) {
   }
 
   // Migrations for existing databases
-  for (const col of ['latitude REAL', 'longitude REAL', 'embedding TEXT', 'title TEXT', 'text TEXT']) {
+  for (const col of ['latitude REAL', 'longitude REAL', 'location_area TEXT', 'publish_minute INTEGER', 'embedding TEXT', 'title TEXT', 'text TEXT']) {
     try { db.exec(`ALTER TABLE listings ADD COLUMN ${col}`); } catch (_) {}
   }
-  for (const col of ['summary_json TEXT', 'evaluation_json TEXT', 'privacy_json TEXT']) {
+  for (const col of ['summary_json TEXT', 'evaluation_json TEXT', 'privacy_json TEXT', 'derived_version INTEGER']) {
     try { db.exec(`ALTER TABLE runs ADD COLUMN ${col}`); } catch (_) {}
   }
 
@@ -161,10 +164,10 @@ export function openStore(dbPath) {
       has_elevator, has_garden, has_view, asking_price, total_price,
       common_costs_monthly, price_per_m2, days_on_market, listing_status,
       title, text, description_synthetic, amenity_tags, image_stub_ids,
-      latitude, longitude, run_id
+      latitude, longitude, location_area, publish_minute, run_id
     ) VALUES (
       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
     )
   `);
 
@@ -218,9 +221,24 @@ export function openStore(dbPath) {
             l.asking_price, l.total_price, l.common_costs_monthly, l.price_per_m2, l.days_on_market,
             l.listing_status, l.title, l.text, l.description_synthetic,
             JSON.stringify(l.amenity_tags), JSON.stringify(l.image_stub_ids),
-            l.latitude ?? null, l.longitude ?? null, runId
+            l.latitude ?? null, l.longitude ?? null, l.location_area ?? null, l.publish_minute ?? null, runId
           );
         }
+        db.exec('COMMIT');
+        committed = true;
+      } finally {
+        if (!committed) db.exec('ROLLBACK');
+      }
+    },
+
+    /** Rewrites derived per-listing fields (position, area, publish minute) and records the version. @param {Object[]} listings @param {string} runId @param {number} version */
+    updateDerivedFields(listings, runId, version) {
+      const stmt = db.prepare('UPDATE listings SET latitude = ?, longitude = ?, location_area = ?, publish_minute = ? WHERE listing_id = ? AND run_id = ?');
+      db.exec('BEGIN');
+      let committed = false;
+      try {
+        for (const it of listings) stmt.run(it.latitude, it.longitude, it.location_area, it.publish_minute, it.listing_id, runId);
+        db.prepare('UPDATE runs SET derived_version = ? WHERE run_id = ?').run(version, runId);
         db.exec('COMMIT');
         committed = true;
       } finally {

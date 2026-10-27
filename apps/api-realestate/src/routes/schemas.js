@@ -38,6 +38,13 @@ export function createSchemas(config) {
     value: z.union([z.string(), z.number(), z.boolean(), z.array(z.union([z.string(), z.number()]))]),
   }).openapi('StructuredFilter', { example: { field: 'total_price', operator: 'lte', value: 5000 } });
 
+  const Location = z.object({
+    lat: z.number().openapi({ example: 59.923 }),
+    lng: z.number().openapi({ example: 10.761 }),
+    area: z.string().openapi({ example: 'Grünerløkka', description: 'District or town centre within the municipality' }),
+    precision: z.literal('approximate').openapi({ description: 'Rounded to about 100 m; never an exact address' }),
+  }).openapi('Location');
+
   const ItemSummary = {
     listing_id: ListingId,
     title: z.string().openapi({ example: '3-bed apartment in Oslo' }),
@@ -45,6 +52,11 @@ export function createSchemas(config) {
     municipality: z.string().openapi({ example: 'Oslo' }),
     property_type: z.enum(property_types),
     total_price: z.number().int().openapi({ example: 6233703, description: 'NOK, asking price plus shared costs' }),
+    location: Location.nullable().openapi({ description: 'Approximate position inside a populated area of the municipality' }),
+    published_at: z.string().nullable().openapi({
+      example: '2026-10-24T20:14:00+02:00',
+      description: 'When the ad was published (ISO 8601, Norwegian local time). Relative to today: an ad keeps its age (days_on_market) and the date rolls forward daily.',
+    }),
   };
 
   // ── Items ─────────────────────────────────────────────────────────────────
@@ -201,6 +213,6 @@ export function createSchemas(config) {
     SearchQuery, SearchResponse, SearchRequestBody, RawSearchResponse,
     DiscoveryHit, DiscoveryResponse, SimilarRequestBody, RecommendationsRequestBody,
     IntentResponse, RecommendationsQuery, RecommendationsResponse, LimitQuery, IdParam,
-    SitemapResponse, HealthResponse,
+    SitemapResponse, HealthResponse, Location,
   };
 }

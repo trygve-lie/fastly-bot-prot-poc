@@ -303,6 +303,16 @@ Fully reproducible from `seed` + `snapshot_date` + config. The mulberry32 PRNG i
 - All JSON-returning routes belong in `src/routes/api.js`; all HTML in `src/routes/frontend.js`; `src/server.js` is the orchestrator only.
 - The store stays open for the server's lifetime — do not call `store.close()` inside request handlers.
 
+## Location and Publish Time
+
+Same implementation as api-recommerce (the modules are copies; keep them in sync):
+
+- **Location.** `src/generation/geo.js` has a few populated areas per municipality (district or town centres, radius 0.4–0.9 km, weight). Each vehicle gets a point in a weighted area, denser towards its centre, rounded to 3 decimals (~100 m). Area centres are public place centres, never addresses. The privacy report warns (`geo_outside_area`) if a point falls outside its municipality's areas.
+- **Publish time.** `src/generation/published.js` gives each vehicle a local publish minute (evening peak, quiet nights). The API builds `published_at` relative to today: `days_on_market` days ago at that minute, in Europe/Oslo time with offset. The date rolls forward daily. For ads published "today", the publish minute is scaled into the part of the day that has passed, so they're never in the future and don't bunch up on the current time.
+- **Separate RNG streams.** Both are derived only from `listing_id` (+ municipality), each with its own RNG seeded via `seedFromString()`. `buildVehicle()` in `src/generation/vehicles.js` still draws the two RNG values of the old bounding-box sampler, so all other generated fields are unchanged. Don't remove those draws.
+- **Stored and versioned.** `latitude`, `longitude`, `location_area` and `publish_minute` are columns on `vehicles`. `runs.derived_version` records `DERIVED_FIELDS_VERSION` (`src/generation/derived.js`). When it differs, startup recomputes the fields in place and rebuilds the privacy report, with no regeneration. Bump the version after changing areas or the time distribution.
+- **API.** Every vehicle and hit has `location: { lat, lng, area, precision: 'approximate' }` and `published_at`. They're added in `routes/api.js` from `state.listingMeta`, not stored in the search documents, so the search index and embeddings are unaffected. `location_cluster` is unrelated to the position and unchanged.
+
 ## API Documentation (OpenAPI)
 
 - `src/routes/api.js` is an `OpenAPIHono` router (`@hono/zod-openapi`). Every route is declared with `createRoute()` in `defineRoutes()` and registered with `app.openapi(route, handler)`.

@@ -1,5 +1,6 @@
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
 import { createSchemas } from './schemas.js';
+import { publishedAt } from '../generation/published.js';
 
 const SERVICE_NAME = 'api-realestate';
 const SERVICE_VERSION = '1.0.0';
@@ -73,7 +74,7 @@ function defineRoutes(s) {
     item: createRoute({
       method: 'get', path: '/api/listings/{id}', tags: ['Listings'],
       summary: 'Get a listing',
-      description: 'Returns the full search document for one listing.',
+      description: 'Returns the full search document for one listing, with its approximate location and publish time.',
       request: { params: s.IdParam },
       responses: { 200: jsonResponse(s.Item, 'The listing'), 404: notFound },
     }),
@@ -137,6 +138,18 @@ export function createApiRouter(state) {
   const schemas = createSchemas(state.config);
   const routes = defineRoutes(schemas);
   const notFound = (c, id) => c.json({ error: 'Not found', listing_id: id }, 404);
+  // Adds approximate location and publish time to a listing or hit.
+  const withDetails = item => {
+    const meta = state.listingMeta.get(item.listing_id);
+    return {
+      ...item,
+      location: meta?.latitude != null
+        ? { lat: meta.latitude, lng: meta.longitude, area: meta.location_area, precision: 'approximate' }
+        : null,
+      published_at: meta ? publishedAt(meta.days_on_market, meta.publish_minute) : null,
+    };
+  };
+  const withHitDetails = result => ({ ...result, hits: result.hits.map(withDetails) });
 
   app.openapi(routes.search, c => {
     const payload = buildApiSearchPayload(c.req.valid('query'));
@@ -146,7 +159,7 @@ export function createApiRouter(state) {
       filters: payload.filters,
       page: payload.page,
       page_size: payload.page_size,
-      hits: result.hits,
+      hits: result.hits.map(withDetails),
       facets: result.facets,
       latency_breakdown: result.latency_breakdown,
     }, 200);
@@ -156,14 +169,14 @@ export function createApiRouter(state) {
     const { id } = c.req.valid('param');
     const doc = state.app.documentRepository.get(id);
     if (!doc) return notFound(c, id);
-    return c.json(doc, 200);
+    return c.json(withDetails(doc), 200);
   });
 
   app.openapi(routes.similar, c => {
     const { id } = c.req.valid('param');
     if (!state.app.documentRepository.get(id)) return notFound(c, id);
     const { limit } = c.req.valid('query');
-    return c.json(state.app.discoverSimilar({ listing_id: id, limit }), 200);
+    return c.json(withHitDetails(state.app.discoverSimilar({ listing_id: id, limit })), 200);
   });
 
   app.openapi(routes.intent, c => {
@@ -172,7 +185,7 @@ export function createApiRouter(state) {
     const intent = cluster.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
     const { limit } = c.req.valid('query');
     const result = state.app.browseIntentCluster({ cluster, limit });
-    return c.json({ intent, cluster, hits: result.hits }, 200);
+    return c.json({ intent, cluster, hits: result.hits.map(withDetails) }, 200);
   });
 
   app.openapi(routes.recommendations, c => {
@@ -181,12 +194,12 @@ export function createApiRouter(state) {
     if (!query.q) {
       const cluster = query.cluster || DEFAULT_CLUSTER;
       const result = state.app.browseIntentCluster({ cluster, limit });
-      return c.json({ surface: 'browse', cluster, hits: result.hits }, 200);
+      return c.json({ surface: 'browse', cluster, hits: result.hits.map(withDetails) }, 200);
     }
     const payload = buildApiSearchPayload(query);
     const searchResult = state.app.search(payload);
     const recs = state.app.discoverRecommendations({ ...payload, limit }, searchResult.rerankedHits);
-    return c.json({ surface: 'search_recommendations', query: query.q, hits: recs.hits }, 200);
+    return c.json({ surface: 'search_recommendations', query: query.q, hits: recs.hits.map(withDetails) }, 200);
   });
 
   app.openapi(routes.sitemap, c => {
@@ -194,15 +207,18 @@ export function createApiRouter(state) {
     return c.json({ listing_ids: ids }, 200);
   });
 
-  app.openapi(routes.rawSearch, c => c.json(state.app.search(c.req.valid('json')), 200));
+  app.openapi(routes.rawSearch, c => {
+    const result = state.app.search(c.req.valid('json'));
+    return c.json({ ...result, hits: result.hits.map(withDetails), rerankedHits: result.rerankedHits.map(withDetails) }, 200);
+  });
 
   app.openapi(routes.discoverSimilar, c => {
     const payload = c.req.valid('json');
     if (!state.app.documentRepository.get(payload.listing_id)) return notFound(c, payload.listing_id);
-    return c.json(state.app.discoverSimilar(payload), 200);
+    return c.json(withHitDetails(state.app.discoverSimilar(payload)), 200);
   });
 
-  app.openapi(routes.discoverRecommendations, c => c.json(state.app.discoverRecommendations(c.req.valid('json')), 200));
+  app.openapi(routes.discoverRecommendations, c => c.json(withHitDetails(state.app.discoverRecommendations(c.req.valid('json'))), 200));
 
   // /health is served by server.js (it must answer before state is ready); document it here.
   app.openAPIRegistry.registerPath({
@@ -220,7 +236,13 @@ export function createApiRouter(state) {
     info: {
       title: SERVICE_NAME,
       version: SERVICE_VERSION,
-      description: 'Synthetic real estate listings: search, listing detail, similar listings, intent feeds and recommendations. All data is generated from a fixed seed; no real listings, addresses or people. Interactive docs: [/docs](/docs).',
+      description: [
+        'Synthetic real estate listings: search, listing detail, similar listings, intent feeds and recommendations. All data is generated from a fixed seed; no real listings, addresses or people. Interactive docs: [/docs](/docs).',
+        '',
+        'Every listing and hit includes:',
+        '- `location`: approximate position (`lat`, `lng`, rounded to about 100 m) inside a populated area (`area`, a district or town centre) of the listing\'s municipality. Never an exact address.',
+        '- `published_at`: when the ad was published, as ISO 8601 in Norwegian local time with offset. It is relative to today: an ad keeps its age (`days_on_market`) and the date rolls forward daily.',
+      ].join('\n'),
     },
     tags: [
       { name: 'Search', description: 'Query-parameter based search' },

@@ -1,3 +1,5 @@
+import { compareRecency, distanceKm, withinRadius } from './geoAndRecency.js';
+
 /**
  * Concatenates all searchable text fields of a search document into a single string.
  * @param {import('./adapters.js').SearchDocument} doc
@@ -205,9 +207,10 @@ export function createSearchBackend(searchConfig, documentRepository, embeddingS
     const pool = eqBucketDocs === null
       ? documentRepository.list()
       : [...eqBucketDocs];
-    const candidates = unbucketedFilters.length
+    const filtered = unbucketedFilters.length
       ? pool.filter(doc => matchesFilters(doc, unbucketedFilters))
       : pool;
+    const candidates = request.geo ? filtered.filter(doc => withinRadius(request.geo, doc)) : filtered;
     const queryEmbedding = embeddingService.embedText(preparedQuery.normalizedText);
     const countyValues = request.filters
       .filter(f => f.field === 'county')
@@ -235,7 +238,10 @@ export function createSearchBackend(searchConfig, documentRepository, embeddingS
       const vec = Math.max(0.0, embeddingService.cosineSimilarity(queryEmbedding, doc.embedding));
       const biz = Math.min(Math.max(doc.business_weight, 0.0), 1.0);
       const score = lex * searchConfig.lexical_weight + vec * searchConfig.vector_weight + biz * searchConfig.business_weight;
-      if ((preparedQuery.normalizedText || request.filters.length) && score <= 0) continue;
+      if ((preparedQuery.normalizedText || request.filters.length || request.geo) && score <= 0) continue;
+      // Newest-first ignores relevance order, so a text query must actually match (keyword or synonym);
+      // otherwise weak vector-only matches would surface at the top.
+      if (request.sort === 'newest' && preparedQuery.normalizedText && lex <= 0) continue;
       scoredHits.push({
         listing_id: doc.listing_id,
         title: doc.title,
@@ -263,10 +269,17 @@ export function createSearchBackend(searchConfig, documentRepository, embeddingS
         freshness_score: 0.0,
         popularity_score: Math.round(biz * 1e6) / 1e6,
         explanation: 'hybrid lexical/vector score',
+        ...(request.geo ? { distance_km: Math.round(distanceKm(request.geo, doc) * 100) / 100 } : {}),
       });
     }
 
-    scoredHits.sort((a, b) => b.score - a.score);
+    // Newest-first sorts the whole match set before the candidate pool is cut, so the pool holds
+    // the newest matches rather than the most relevant ones.
+    if (request.sort === 'newest') {
+      scoredHits.sort((a, b) => compareRecency(documentRepository.get(a.listing_id), documentRepository.get(b.listing_id)));
+    } else {
+      scoredHits.sort((a, b) => b.score - a.score);
+    }
     const limitedHits = scoredHits.slice(0, searchConfig.candidate_pool_size);
     const facets = { county: facetCounty, municipality: facetMunicipality, category: facetCategory, condition: facetCondition, listing_status: facetListingStatus };
     return { hits: limitedHits, facets };
