@@ -53,7 +53,10 @@ export function createEmbeddingService(searchConfig) {
    * @returns {number}
    */
   function cosineSimilarity(left, right) {
-    return left.reduce((sum, l, i) => sum + l * right[i], 0);
+    // Plain loop: called once per candidate on every search, and much faster than reduce().
+    let sum = 0;
+    for (let i = 0; i < left.length; i++) sum += left[i] * right[i];
+    return sum;
   }
 
   return { embedText, cosineSimilarity };

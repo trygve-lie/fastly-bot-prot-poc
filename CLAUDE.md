@@ -230,6 +230,10 @@ Schemas are built from the loaded config (`createSchemas(config)`), so enums lik
 
 `apps/api-recommerce/tools/generate-images/` is a standalone CLI (`npm run images:generate -w apps/api-recommerce`). It reads items over the service's HTTP API, generates images with Cloudflare Workers AI, and writes `apps/api-recommerce/images/` (committed and deployed with the service), which contains `files/`, `manifest.json` and an `index.html` contact sheet. Credentials come from `.env.cloudflare` in the repo root (gitignored). Service code must never import from `tools/`; `manifest.json` is the only contract. The service loads the manifest into the `item_images` table on every start, adds `images: [{url, alt, width, height}]` to every item and hit, and serves the files at `GET /images/:file`. See the service's `AGENTS.md`. Each run calls a paid API, so only the user runs it.
 
+### Performance and caching
+
+Search, similar and recommendation results are cached in memory per request, with an LRU cache in `src/routes/responseCache.js`. Responses carry `X-Cache: HIT|MISS`. Time-dependent fields are added after the cache lookup. Search keeps only the top `candidate_pool_size` hits (`src/search/topK.js`), FTS statements are reused, and `/openapi.json` is generated once. `topK.js`, `responseCache.js`, `geoAndRecency.js` and `published.js` are identical across the three services; keep them in sync. See the "Performance" section in each service's `AGENTS.md`.
+
 ### Adding a new endpoint
 
 Add it in `src/routes/api.js`: define it with `createRoute()` in `defineRoutes()` (request schema + response schemas, add new schemas to `src/routes/schemas.js`), then register the handler with `app.openapi(route, handler)` inside `createApiRouter(state)`. Never use plain `app.get()` there — undocumented routes won't appear in `/openapi.json`. State fields available: `state.config`, `state.app` (search application), `state.store` (SQLite), `state.vehicles`/`state.listings`, `state.behavior`, `state.runId`.

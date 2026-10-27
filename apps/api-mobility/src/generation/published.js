@@ -34,29 +34,48 @@ export function samplePublishMinute(listingId) {
  * @returns {string} ISO 8601 local time with offset, e.g. 2026-10-24T20:14:00+02:00
  */
 export function publishedAt(daysOnMarket, publishMinute, now = new Date()) {
-  const today = localParts(now);
-  const nowMinute = today.hour * 60 + today.minute;
-  const minute = daysOnMarket === 0 ? Math.floor(publishMinute * nowMinute / 1440) : publishMinute;
+  const today = todayAt(now);
+  const minute = daysOnMarket === 0 ? Math.floor(publishMinute * today.nowMinute / 1440) : publishMinute;
   const day = new Date(Date.UTC(today.year, today.month - 1, today.day - daysOnMarket));
   const [y, m, d] = [day.getUTCFullYear(), day.getUTCMonth() + 1, day.getUTCDate()];
   const hh = Math.floor(minute / 60);
   const mm = minute % 60;
-  // Find the UTC offset in effect at that local time (handles summer/winter time).
-  const asUtc = Date.UTC(y, m - 1, d, hh, mm);
-  const offset = offsetMinutes(new Date(asUtc - offsetMinutes(new Date(asUtc)) * 60_000));
-  return `${y}-${pad(m)}-${pad(d)}T${pad(hh)}:${pad(mm)}:00${formatOffset(offset)}`;
+  return `${y}-${pad(m)}-${pad(d)}T${pad(hh)}:${pad(mm)}:00${localOffset(y, m, d, hh)}`;
 }
 
-function localParts(date) {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
-    timeZone: TIME_ZONE, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hourCycle: 'h23',
-  }).formatToParts(date).map(p => [p.type, Number(p.value)]));
-  return { year: parts.year, month: parts.month, day: parts.day, hour: parts.hour, minute: parts.minute };
+// Intl formatters are expensive to create (~35 µs each), so they are built once. "Today" is memoized
+// per minute and UTC offsets per local hour, which keeps publishedAt() to a few µs per call.
+const LOCAL_PARTS_FORMAT = new Intl.DateTimeFormat('en-GB', {
+  timeZone: TIME_ZONE, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hourCycle: 'h23',
+});
+const OFFSET_FORMAT = new Intl.DateTimeFormat('en-US', { timeZone: TIME_ZONE, timeZoneName: 'longOffset' });
+let todayCache = { minuteKey: null, value: null };
+const offsetCache = new Map(); // "y-m-d-h" -> "+01:00"
+
+function todayAt(now) {
+  const minuteKey = Math.floor(now.getTime() / 60_000);
+  if (todayCache.minuteKey !== minuteKey) {
+    const parts = Object.fromEntries(LOCAL_PARTS_FORMAT.formatToParts(now).map(p => [p.type, Number(p.value)]));
+    todayCache = { minuteKey, value: { year: parts.year, month: parts.month, day: parts.day, nowMinute: parts.hour * 60 + parts.minute } };
+  }
+  return todayCache.value;
+}
+
+// UTC offset in effect at a local date and hour (handles summer/winter time).
+function localOffset(y, m, d, hh) {
+  const key = `${y}-${m}-${d}-${hh}`;
+  let offset = offsetCache.get(key);
+  if (offset === undefined) {
+    const asUtc = Date.UTC(y, m - 1, d, hh);
+    offset = formatOffset(offsetMinutes(new Date(asUtc - offsetMinutes(new Date(asUtc)) * 60_000)));
+    if (offsetCache.size > 10_000) offsetCache.clear();
+    offsetCache.set(key, offset);
+  }
+  return offset;
 }
 
 function offsetMinutes(date) {
-  const name = new Intl.DateTimeFormat('en-US', { timeZone: TIME_ZONE, timeZoneName: 'longOffset' })
-    .formatToParts(date).find(p => p.type === 'timeZoneName').value; // e.g. "GMT+02:00"
+  const name = OFFSET_FORMAT.formatToParts(date).find(p => p.type === 'timeZoneName').value; // e.g. "GMT+02:00"
   const match = name.match(/GMT([+-])(\d{2}):(\d{2})/);
   return match ? (match[1] === '-' ? -1 : 1) * (Number(match[2]) * 60 + Number(match[3])) : 0;
 }

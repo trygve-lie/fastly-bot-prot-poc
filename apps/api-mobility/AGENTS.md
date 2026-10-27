@@ -323,6 +323,15 @@ Same behaviour as api-recommerce (`src/search/geoAndRecency.js` is an identical 
 - The search documents carry `latitude`, `longitude` and `publish_minute` for this. They're not part of the search text or embeddings, and `routes/api.js` strips them from responses in favour of `location` / `published_at`.
 - `/api/recommendations?q=` accepts the same price and radius parameters, but not `sort`.
 
+## Performance
+
+- **Response cache.** `src/routes/responseCache.js` is an in-memory LRU cache (1 000 entries, no expiry, since the data is static while the service runs). It holds search, similar, recommendation and POST discovery results, keyed by the validated request. `published_at`, `location` and `images` are added after the lookup, so cached results stay correct as the date rolls forward. Responses carry `X-Cache: HIT|MISS`. A cached response repeats the `latency_breakdown` of its original computation. Never mutate a cached result: `withDetails()` copies each hit.
+- **Candidate pool.** `backend.search()` scores every candidate into light entries and keeps only the top `candidate_pool_size` with `selectTop()` (`src/search/topK.js`, a bounded heap with the same order as sort + slice). Hit objects are built only for those. Vector scoring is skipped for empty queries, whose query vector is zero.
+- **FTS.** Prepared statements are reused per SQL variant. Relevance scores the best 200 text matches; `sort=newest` scores every match (`LIMIT` removed), so newest-first sees the whole match set.
+- **`published_at`.** `publishedAt()` reuses its `Intl.DateTimeFormat` objects and memoizes "today" per minute and offsets per local hour, at about 1 µs per call. Creating formatters per call cost about 150 µs.
+- **`/openapi.json`** is generated once, on first request, with `getOpenAPI31Document()`.
+- `topK.js`, `responseCache.js`, `geoAndRecency.js` and `published.js` are identical in all three API services; keep them in sync.
+
 ## API Documentation (OpenAPI)
 
 - `src/routes/api.js` is an `OpenAPIHono` router (`@hono/zod-openapi`). Every route is declared with `createRoute()` in `defineRoutes()` and registered with `app.openapi(route, handler)`.

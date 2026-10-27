@@ -1,4 +1,5 @@
 import { compareRecency, distanceKm, withinRadius } from './geoAndRecency.js';
+import { selectTop } from './topK.js';
 
 /**
  * Concatenates all searchable text fields of a search document into a single string.
@@ -52,26 +53,29 @@ function buildFtsQuery(preparedQuery, queryPreprocessor) {
   return [...terms].map(t => `"${t.replace(/"/g, '""')}"`).join(' OR ');
 }
 
+// Prepared FTS statements, reused across requests (one per SQL variant).
+const ftsStatements = new WeakMap(); // store -> Map<sql, StatementSync>
+
 /**
  * Queries the FTS5 virtual table and returns a normalised BM25 score map, or null on failure/unavailability.
  * @param {Object|null} store
  * @param {string} queryText
  * @param {string} ftsTable
+ * @param {string[]|null} [countyValues]
+ * @param {number|null} [limit=200] - Max matches to score; null scores every match (needed for newest-first).
  * @returns {Map<string, number>|null}
  */
-function queryFTS5(store, queryText, ftsTable, countyValues = null) {
+function queryFTS5(store, queryText, ftsTable, countyValues = null, limit = 200) {
   if (!store || !queryText.trim()) return null;
   try {
-    let sql, params;
-    if (countyValues && countyValues.length > 0) {
-      const placeholders = countyValues.map(() => '?').join(', ');
-      sql = `SELECT listing_id, -bm25(${ftsTable}) as score FROM ${ftsTable} WHERE text_content MATCH ? AND county IN (${placeholders}) ORDER BY score DESC LIMIT 200`;
-      params = [queryText, ...countyValues];
-    } else {
-      sql = `SELECT listing_id, -bm25(${ftsTable}) as score FROM ${ftsTable} WHERE text_content MATCH ? ORDER BY score DESC LIMIT 200`;
-      params = [queryText];
-    }
-    const rows = store.db.prepare(sql).all(...params);
+    const countyClause = countyValues && countyValues.length > 0 ? ` AND county IN (${countyValues.map(() => '?').join(', ')})` : '';
+    const limitClause = limit == null ? '' : ` LIMIT ${Number(limit)}`;
+    const sql = `SELECT listing_id, -bm25(${ftsTable}) as score FROM ${ftsTable} WHERE text_content MATCH ?${countyClause} ORDER BY score DESC${limitClause}`;
+    let statements = ftsStatements.get(store);
+    if (!statements) { statements = new Map(); ftsStatements.set(store, statements); }
+    let stmt = statements.get(sql);
+    if (!stmt) { stmt = store.db.prepare(sql); statements.set(sql, stmt); }
+    const rows = stmt.all(queryText, ...(countyClause ? countyValues : []));
     if (!rows.length) return new Map();
     const maxScore = rows[0].score;
     return new Map(rows.map(r => [r.listing_id, maxScore > 0 ? r.score / maxScore : 0]));
@@ -215,7 +219,11 @@ export function createSearchBackend(searchConfig, documentRepository, embeddingS
     const countyValues = request.filters
       .filter(f => f.field === 'county')
       .flatMap(f => f.operator === 'in' ? f.value : [f.value]);
-    const fts5Scores = queryFTS5(store, buildFtsQuery(preparedQuery, queryPreprocessor), FTS_TABLE, countyValues.length ? countyValues : null);
+    // Newest-first must see every text match (broad queries match thousands), not just the 200 best.
+    const ftsLimit = request.sort === 'newest' ? null : 200;
+    const fts5Scores = queryFTS5(store, buildFtsQuery(preparedQuery, queryPreprocessor), FTS_TABLE, countyValues.length ? countyValues : null, ftsLimit);
+    // An empty query embeds to the zero vector, so every vector score would be 0.
+    const hasQueryVector = Boolean(preparedQuery.normalizedText);
     const corpusSize = Math.max(documentTermsMap.size, 1);
     const docFreq = fts5Scores ? null : documentFrequency(preparedQuery);
     const expandedQueryTerms = fts5Scores ? [] : (() => {
@@ -225,7 +233,7 @@ export function createSearchBackend(searchConfig, documentRepository, embeddingS
     })();
 
     const facetCounty = {}, facetMunicipality = {}, facetVehicleType = {}, facetListingStatus = {};
-    const scoredHits = [];
+    const scored = []; // light entries; hit objects are only built for the candidate pool
     for (const doc of candidates) {
       facetCounty[doc.county] = (facetCounty[doc.county] || 0) + 1;
       facetMunicipality[doc.municipality] = (facetMunicipality[doc.municipality] || 0) + 1;
@@ -234,48 +242,47 @@ export function createSearchBackend(searchConfig, documentRepository, embeddingS
       const lex = fts5Scores
         ? (fts5Scores.get(doc.listing_id) ?? 0)
         : lexicalScore(doc, expandedQueryTerms, corpusSize, docFreq);
-      const vec = Math.max(0.0, embeddingService.cosineSimilarity(queryEmbedding, doc.embedding));
+      const vec = hasQueryVector ? Math.max(0.0, embeddingService.cosineSimilarity(queryEmbedding, doc.embedding)) : 0.0;
       const biz = Math.min(Math.max(doc.business_weight, 0.0), 1.0);
       const score = lex * searchConfig.lexical_weight + vec * searchConfig.vector_weight + biz * searchConfig.business_weight;
       if ((preparedQuery.normalizedText || request.filters.length || request.geo) && score <= 0) continue;
       // Newest-first ignores relevance order, so a text query must actually match (keyword or synonym);
       // otherwise weak vector-only matches would surface at the top.
       if (request.sort === 'newest' && preparedQuery.normalizedText && lex <= 0) continue;
-      scoredHits.push({
-        listing_id: doc.listing_id,
-        title: doc.title,
-        text: doc.text,
-        county: doc.county,
-        municipality: doc.municipality,
-        vehicle_type: doc.vehicle_type,
-        make: doc.make,
-        model: doc.model,
-        fuel_type: doc.fuel_type,
-        total_price: doc.total_price,
-        mileage_km: doc.mileage_km,
-        score: Math.round(score * 1e6) / 1e6,
-        lexical_score: Math.round(lex * 1e6) / 1e6,
-        vector_score: Math.round(vec * 1e6) / 1e6,
-        rerank_score: 0.0,
-        business_score: Math.round(biz * 1e6) / 1e6,
-        filter_match_score: 0.0,
-        geo_fit_score: 0.0,
-        price_fit_score: 0.0,
-        freshness_score: 0.0,
-        popularity_score: Math.round(biz * 1e6) / 1e6,
-        explanation: 'hybrid lexical/vector score',
-        ...(request.geo ? { distance_km: Math.round(distanceKm(request.geo, doc) * 100) / 100 } : {}),
-      });
+      scored.push({ doc, score, lex, vec, biz, order: scored.length });
     }
 
-    // Newest-first sorts the whole match set before the candidate pool is cut, so the pool holds
-    // the newest matches rather than the most relevant ones.
-    if (request.sort === 'newest') {
-      scoredHits.sort((a, b) => compareRecency(documentRepository.get(a.listing_id), documentRepository.get(b.listing_id)));
-    } else {
-      scoredHits.sort((a, b) => b.score - a.score);
-    }
-    const limitedHits = scoredHits.slice(0, searchConfig.candidate_pool_size);
+    // Keep only the candidate pool (top N) instead of sorting every match. Newest-first ranks the whole
+    // match set by recency, so the pool holds the newest matches rather than the most relevant ones.
+    const compare = request.sort === 'newest'
+      ? (a, b) => compareRecency(a.doc, b.doc)
+      : (a, b) => (b.score - a.score) || (a.order - b.order);
+    const toHit = ({ doc, score, lex, vec, biz }) => ({
+      listing_id: doc.listing_id,
+      title: doc.title,
+      text: doc.text,
+      county: doc.county,
+      municipality: doc.municipality,
+      vehicle_type: doc.vehicle_type,
+      make: doc.make,
+      model: doc.model,
+      fuel_type: doc.fuel_type,
+      total_price: doc.total_price,
+      mileage_km: doc.mileage_km,
+      score: Math.round(score * 1e6) / 1e6,
+      lexical_score: Math.round(lex * 1e6) / 1e6,
+      vector_score: Math.round(vec * 1e6) / 1e6,
+      rerank_score: 0.0,
+      business_score: Math.round(biz * 1e6) / 1e6,
+      filter_match_score: 0.0,
+      geo_fit_score: 0.0,
+      price_fit_score: 0.0,
+      freshness_score: 0.0,
+      popularity_score: Math.round(biz * 1e6) / 1e6,
+      explanation: 'hybrid lexical/vector score',
+      ...(request.geo ? { distance_km: Math.round(distanceKm(request.geo, doc) * 100) / 100 } : {}),
+    });
+    const limitedHits = selectTop(scored, searchConfig.candidate_pool_size, compare).map(toHit);
     const facets = { county: facetCounty, municipality: facetMunicipality, vehicle_type: facetVehicleType, listing_status: facetListingStatus };
     return { hits: limitedHits, facets };
   }

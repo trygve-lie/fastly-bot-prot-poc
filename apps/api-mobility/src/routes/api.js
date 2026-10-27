@@ -1,9 +1,11 @@
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
 import { createSchemas } from './schemas.js';
+import { createResponseCache } from './responseCache.js';
 import { publishedAt } from '../generation/published.js';
 
 const SERVICE_NAME = 'api-mobility';
 const SERVICE_VERSION = '1.0.0';
+const RESPONSE_CACHE_ENTRIES = 1000;
 const DEFAULT_CLUSTER = 'commuters';
 
 /**
@@ -155,10 +157,18 @@ export function createApiRouter(state) {
     };
   };
   const withHitDetails = result => ({ ...result, hits: result.hits.map(withDetails) });
+  // Search and discovery results are cached per validated request. Cached results are never mutated:
+  // withDetails() copies every hit. X-Cache tells whether a response was served from the cache.
+  const cache = createResponseCache(RESPONSE_CACHE_ENTRIES);
+  const cached = (c, key, compute) => {
+    const { value, hit } = cache.getOrCompute(key, compute);
+    c.header('X-Cache', hit ? 'HIT' : 'MISS');
+    return value;
+  };
 
   app.openapi(routes.search, c => {
     const payload = buildApiSearchPayload(c.req.valid('query'));
-    const result = state.app.search(payload);
+    const result = cached(c, `search:${JSON.stringify(payload)}`, () => state.app.search(payload));
     return c.json({
       query: payload.query_text,
       filters: payload.filters,
@@ -183,7 +193,7 @@ export function createApiRouter(state) {
     const { id } = c.req.valid('param');
     if (!state.app.documentRepository.get(id)) return notFound(c, id);
     const { limit } = c.req.valid('query');
-    return c.json(withHitDetails(state.app.discoverSimilar({ listing_id: id, limit })), 200);
+    return c.json(withHitDetails(cached(c, `similar:${id}:${limit ?? ''}`, () => state.app.discoverSimilar({ listing_id: id, limit }))), 200);
   });
 
   app.openapi(routes.intent, c => {
@@ -204,8 +214,10 @@ export function createApiRouter(state) {
       return c.json({ surface: 'browse', cluster, hits: result.hits.map(withDetails) }, 200);
     }
     const payload = buildApiSearchPayload(query);
-    const searchResult = state.app.search(payload);
-    const recs = state.app.discoverRecommendations({ ...payload, limit }, searchResult.rerankedHits);
+    const recs = cached(c, `recommendations:${limit ?? ''}:${JSON.stringify(payload)}`, () => {
+      const searchResult = state.app.search(payload);
+      return state.app.discoverRecommendations({ ...payload, limit }, searchResult.rerankedHits);
+    });
     return c.json({ surface: 'search_recommendations', query: query.q, hits: recs.hits.map(withDetails) }, 200);
   });
 
@@ -215,17 +227,21 @@ export function createApiRouter(state) {
   });
 
   app.openapi(routes.rawSearch, c => {
-    const result = state.app.search(c.req.valid('json'));
+    const body = c.req.valid('json');
+    const result = cached(c, `rawSearch:${JSON.stringify(body)}`, () => state.app.search(body));
     return c.json({ ...result, hits: result.hits.map(withDetails), rerankedHits: result.rerankedHits.map(withDetails) }, 200);
   });
 
   app.openapi(routes.discoverSimilar, c => {
     const payload = c.req.valid('json');
     if (!state.app.documentRepository.get(payload.listing_id)) return notFound(c, payload.listing_id);
-    return c.json(withHitDetails(state.app.discoverSimilar(payload)), 200);
+    return c.json(withHitDetails(cached(c, `discoverSimilar:${JSON.stringify(payload)}`, () => state.app.discoverSimilar(payload))), 200);
   });
 
-  app.openapi(routes.discoverRecommendations, c => c.json(withHitDetails(state.app.discoverRecommendations(c.req.valid('json'))), 200));
+  app.openapi(routes.discoverRecommendations, c => {
+    const body = c.req.valid('json');
+    return c.json(withHitDetails(cached(c, `discoverRecommendations:${JSON.stringify(body)}`, () => state.app.discoverRecommendations(body))), 200);
+  });
 
   // /health is served by server.js (it must answer before state is ready); document it here.
   app.openAPIRegistry.registerPath({
@@ -238,7 +254,9 @@ export function createApiRouter(state) {
     },
   });
 
-  app.doc31('/openapi.json', {
+  // The OpenAPI document never changes at runtime: generate it once (on first request, after all
+  // routes are registered) instead of on every request.
+  const openApiConfig = {
     openapi: '3.1.0',
     info: {
       title: SERVICE_NAME,
@@ -259,7 +277,9 @@ export function createApiRouter(state) {
       { name: 'Search (POST)', description: 'Lower-level endpoints taking structured JSON bodies' },
       { name: 'System', description: 'Operational endpoints' },
     ],
-  });
+  };
+  let openApiDocument = null;
+  app.get('/openapi.json', c => c.json(openApiDocument ??= app.getOpenAPI31Document(openApiConfig)));
 
   return app;
 }
