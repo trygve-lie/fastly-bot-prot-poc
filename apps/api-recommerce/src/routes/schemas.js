@@ -46,6 +46,13 @@ export function createSchemas(config) {
     height: z.number().int().nullable().openapi({ example: 768 }),
   }).openapi('Image');
 
+  const Location = z.object({
+    lat: z.number().openapi({ example: 59.923 }),
+    lng: z.number().openapi({ example: 10.761 }),
+    area: z.string().openapi({ example: 'Grünerløkka', description: 'District or town centre within the municipality' }),
+    precision: z.literal('approximate').openapi({ description: 'Rounded to about 100 m; never an exact address' }),
+  }).openapi('Location');
+
   const ItemSummary = {
     listing_id: ListingId,
     title: z.string().openapi({ example: 'Apple iPhone 13 128 GB' }),
@@ -62,6 +69,11 @@ export function createSchemas(config) {
     shipping_available: z.boolean(),
     total_price: z.number().int().openapi({ example: 4549, description: 'NOK, asking price plus shipping' }),
     images: z.array(Image).openapi({ description: 'Item photos, first one is the main photo. Empty when the item has no image.' }),
+    location: Location.nullable().openapi({ description: 'Approximate position inside a populated area of the municipality' }),
+    published_at: z.string().nullable().openapi({
+      example: '2026-10-24T20:14:00+02:00',
+      description: 'When the ad was published (ISO 8601, Norwegian local time). Relative to today: an ad keeps its age (days_on_market) and the date rolls forward daily.',
+    }),
   };
 
   // ── Items ─────────────────────────────────────────────────────────────────
@@ -231,6 +243,6 @@ export function createSchemas(config) {
     SearchQuery, SearchResponse, SearchRequestBody, RawSearchResponse,
     DiscoveryHit, DiscoveryResponse, SimilarRequestBody, RecommendationsRequestBody,
     IntentResponse, RecommendationsQuery, RecommendationsResponse, LimitQuery, IdParam,
-    SitemapResponse, HealthResponse, Image, ImageParam,
+    SitemapResponse, HealthResponse, Image, ImageParam, Location,
   };
 }

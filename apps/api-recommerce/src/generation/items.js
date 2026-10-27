@@ -1,4 +1,5 @@
 import { createRng } from '../rng.js';
+import { derivedFields } from './derived.js';
 import { createItem } from '../schema/item.js';
 import { buildTitle, buildText, buildDescription, PRODUCT_CATALOG } from './text.js';
 
@@ -58,43 +59,16 @@ const FEATURE_RULES = {
   garden_tools:          { recently_serviced: 0.30, accessories_included: 0.35, receipt: 0.25, original_box: 0.15 },
 };
 
-const MUNICIPALITY_BOUNDS = {
-  Oslo:         [59.850, 59.970, 10.650, 10.850],
-  Bergen:       [60.350, 60.450, 5.250,  5.400],
-  Askoy:        [60.380, 60.480, 5.100,  5.250],
-  Alver:        [60.500, 60.600, 5.300,  5.500],
-  Trondheim:    [63.350, 63.450, 10.350, 10.550],
-  Malvik:       [63.400, 63.500, 10.600, 10.800],
-  Melhus:       [63.250, 63.350, 10.200, 10.400],
-  Stavanger:    [58.950, 59.050, 5.650,  5.800],
-  Sandnes:      [58.830, 58.930, 5.700,  5.850],
-  Sola:         [58.850, 58.920, 5.600,  5.720],
-  Kristiansand: [58.120, 58.200, 7.950,  8.100],
-  Lillesand:    [58.230, 58.300, 8.350,  8.500],
-  Arendal:      [58.430, 58.500, 8.720,  8.850],
-  Bodo:         [67.260, 67.320, 14.350, 14.550],
-  Narvik:       [68.410, 68.470, 17.380, 17.550],
-  Sortland:     [68.680, 68.740, 15.400, 15.550],
-};
+// Municipalities that drew two RNG values for a (now replaced) bounding-box position. The draws are
+// kept so every other generated field, and therefore the image mapping, stays identical.
+const LEGACY_GEO_MUNICIPALITIES = new Set([
+  'Oslo', 'Bergen', 'Askoy', 'Alver', 'Trondheim', 'Malvik', 'Melhus', 'Stavanger', 'Sandnes', 'Sola',
+  'Kristiansand', 'Lillesand', 'Arendal', 'Bodo', 'Narvik', 'Sortland',
+]);
 
 const LOCATION_CLUSTERS = ['city_centre', 'student_quarter', 'suburban_loop', 'harbour_side', 'valley_edge'];
 const SHIPPING_COSTS_SMALL = [59, 79, 99];
 const SHIPPING_COSTS_LARGE = [99, 149, 199, 249];
-
-/**
- * Returns a random [lat, lng] pair within a municipality's bounding box, or [null, null].
- * @param {string} municipality
- * @param {import('../rng.js').Rng} rng
- * @returns {[number|null, number|null]}
- */
-function sampleGeoPosition(municipality, rng) {
-  const bounds = MUNICIPALITY_BOUNDS[municipality];
-  if (!bounds) return [null, null];
-  const [latMin, latMax, lngMin, lngMax] = bounds;
-  const lat = Math.round((latMin + rng.random() * (latMax - latMin)) * 1e6) / 1e6;
-  const lng = Math.round((lngMin + rng.random() * (lngMax - lngMin)) * 1e6) / 1e6;
-  return [lat, lng];
-}
 
 /**
  * Selects a county by weighted sampling from the config.
@@ -265,7 +239,7 @@ export function buildItem(config, rng, sequenceNumber, snapshotDate, listingStat
   const days_on_market = rng.randint(0, 90);
   const sale_type = rng.random() < config.calibration.bidding_share ? 'bidding' : 'fixed_price';
   const seller_type = rng.random() < config.calibration.shop_share ? 'shop' : 'private';
-  const [latitude, longitude] = sampleGeoPosition(municipality, rng);
+  if (LEGACY_GEO_MUNICIPALITIES.has(municipality)) { rng.random(); rng.random(); }
 
   const attrs = {
     listing_id,
@@ -313,8 +287,7 @@ export function buildItem(config, rng, sequenceNumber, snapshotDate, listingStat
     text,
     description_synthetic,
     image_stub_ids,
-    latitude,
-    longitude,
+    ...derivedFields(listing_id, municipality),
   });
 }
 

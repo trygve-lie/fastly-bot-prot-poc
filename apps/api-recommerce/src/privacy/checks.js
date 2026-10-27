@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { isWithinMunicipalityAreas } from '../generation/geo.js';
 
 const PHONE_RE = /\b(?:\+47\s?)?\d{8}\b/;
 const EMAIL_RE = /\b\S+@\S+\.\S+\b/;
@@ -42,6 +43,9 @@ export function buildPrivacyReport(items, configHash, seed) {
   let schemaValidationErrors = 0;
 
   for (const item of items) {
+    if (item.latitude != null && !isWithinMunicipalityAreas(item.municipality, item.latitude, item.longitude)) {
+      warnings.push({ warning_type: 'geo_outside_area', severity: 'medium', listing_id: item.listing_id, field_name: 'latitude/longitude', message: `Position is outside the populated areas of ${item.municipality}` });
+    }
     for (const fieldName of ['title', 'text', 'description_synthetic']) {
       const text = item[fieldName];
       warnings.push(...scanTextPatterns(item, fieldName, text));

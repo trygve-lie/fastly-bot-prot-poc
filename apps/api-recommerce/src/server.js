@@ -6,6 +6,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config.js';
 import { generateItems, buildSummary } from './generation/items.js';
+import { derivedFields, DERIVED_FIELDS_VERSION } from './generation/derived.js';
 import { generateSessions, buildBehaviorSummary } from './generation/behavior.js';
 import { createSearchApplication } from './search/application.js';
 import { buildPrivacyReport } from './privacy/checks.js';
@@ -55,6 +56,16 @@ function buildDemoState(config, dbPath, imagesDir) {
     existingRun = { run_id: runId };
   }
 
+  // Position, area and publish minute are derived from listing_id + municipality only. Recompute them
+  // in place when the stored version is outdated (also fills them on databases created before they existed).
+  let derivedUpdated = false;
+  if (existingRun.derived_version !== DERIVED_FIELDS_VERSION) {
+    console.log(`Updating geo positions and publish times (derived fields v${DERIVED_FIELDS_VERSION})…`);
+    for (const item of items) Object.assign(item, derivedFields(item.listing_id, item.municipality));
+    store.updateDerivedFields(items, runId, DERIVED_FIELDS_VERSION);
+    derivedUpdated = true;
+  }
+
   let behavior;
   if (store.hasBehavior(runId)) {
     console.log('Loading behavior from SQLite…');
@@ -69,7 +80,7 @@ function buildDemoState(config, dbPath, imagesDir) {
 
   // Load or compute privacy report
   let privacySummary;
-  if (existingRun.privacy_json) {
+  if (existingRun.privacy_json && !derivedUpdated) {
     privacySummary = JSON.parse(existingRun.privacy_json);
   } else {
     privacySummary = buildPrivacyReport(items, configHash, config.seed);
@@ -113,7 +124,13 @@ function buildDemoState(config, dbPath, imagesDir) {
     ? `Loaded ${imageRows.length} image references for ${images.size} items from ${imagesDir}`
     : `No image manifest in ${imagesDir}; items have no images`);
 
-  return { config, app, store, runId, items, behavior, itemsSummary, privacySummary, evaluationSummary, images, imagesDir };
+  // Per-listing fields the API adds to items and hits (kept out of the search documents).
+  const listingMeta = new Map(items.map(it => [it.listing_id, {
+    latitude: it.latitude, longitude: it.longitude, location_area: it.location_area,
+    publish_minute: it.publish_minute, days_on_market: it.days_on_market,
+  }]));
+
+  return { config, app, store, runId, items, behavior, itemsSummary, privacySummary, evaluationSummary, images, imagesDir, listingMeta };
 }
 
 /**

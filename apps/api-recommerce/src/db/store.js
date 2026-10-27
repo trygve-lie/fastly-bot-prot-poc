@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS items (
   image_stub_ids TEXT,
   latitude REAL,
   longitude REAL,
+  location_area TEXT,
+  publish_minute INTEGER,
   embedding TEXT,
   run_id TEXT
 );
@@ -91,7 +93,8 @@ CREATE TABLE IF NOT EXISTS runs (
   listing_count INTEGER,
   summary_json TEXT,
   evaluation_json TEXT,
-  privacy_json TEXT
+  privacy_json TEXT,
+  derived_version INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS item_images (
@@ -142,10 +145,10 @@ export function openStore(dbPath) {
   }
 
   // Migrations for existing databases
-  for (const col of ['latitude REAL', 'longitude REAL', 'embedding TEXT', 'title TEXT', 'text TEXT']) {
+  for (const col of ['latitude REAL', 'longitude REAL', 'location_area TEXT', 'publish_minute INTEGER', 'embedding TEXT', 'title TEXT', 'text TEXT']) {
     try { db.exec(`ALTER TABLE items ADD COLUMN ${col}`); } catch (_) {}
   }
-  for (const col of ['summary_json TEXT', 'evaluation_json TEXT', 'privacy_json TEXT']) {
+  for (const col of ['summary_json TEXT', 'evaluation_json TEXT', 'privacy_json TEXT', 'derived_version INTEGER']) {
     try { db.exec(`ALTER TABLE runs ADD COLUMN ${col}`); } catch (_) {}
   }
 
@@ -157,10 +160,10 @@ export function openStore(dbPath) {
       shipping_available, shipping_cost, has_original_box, has_receipt, has_warranty,
       asking_price, total_price, days_on_market, listing_status,
       title, text, description_synthetic, feature_tags, image_stub_ids,
-      latitude, longitude, run_id
+      latitude, longitude, location_area, publish_minute, run_id
     ) VALUES (
       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
     )
   `);
 
@@ -219,9 +222,30 @@ export function openStore(dbPath) {
             it.asking_price, it.total_price, it.days_on_market, it.listing_status,
             it.title, it.text, it.description_synthetic,
             JSON.stringify(it.feature_tags), JSON.stringify(it.image_stub_ids),
-            it.latitude ?? null, it.longitude ?? null, runId
+            it.latitude ?? null, it.longitude ?? null, it.location_area ?? null, it.publish_minute ?? null, runId
           );
         }
+        db.exec('COMMIT');
+        committed = true;
+      } finally {
+        if (!committed) db.exec('ROLLBACK');
+      }
+    },
+
+    /**
+     * Rewrites the derived per-listing fields (position, area, publish minute) for a run and records
+     * the derived-fields version, inside one transaction.
+     * @param {{ listing_id: string, latitude: number|null, longitude: number|null, location_area: string|null, publish_minute: number }[]} items
+     * @param {string} runId
+     * @param {number} version
+     */
+    updateDerivedFields(items, runId, version) {
+      const stmt = db.prepare('UPDATE items SET latitude = ?, longitude = ?, location_area = ?, publish_minute = ? WHERE listing_id = ? AND run_id = ?');
+      db.exec('BEGIN');
+      let committed = false;
+      try {
+        for (const it of items) stmt.run(it.latitude, it.longitude, it.location_area, it.publish_minute, it.listing_id, runId);
+        db.prepare('UPDATE runs SET derived_version = ? WHERE run_id = ?').run(version, runId);
         db.exec('COMMIT');
         committed = true;
       } finally {

@@ -145,6 +145,16 @@ GET /api/intent, /api/recommendations, /api/sitemap  (same pattern)
 
 Recommerce covers 13 categories — electronics, computers & gaming, home appliances, furniture, home decor, clothing, shoes & accessories, kids & baby, sports & outdoors, hobbies & music, books & media, antiques & collectibles, garden & tools — with real product brands (Apple, IKEA, Fjällräven, Stokke, Trek, Fender, Husqvarna, …). Sellers, shops and locations are synthetic.
 
+Every recommerce item and hit also has:
+
+| Field | Example | Notes |
+|---|---|---|
+| `images` | `[{ "url": "/images/b99b9c33….jpg", "alt": "Stokke Xplory", "width": 1024, "height": 768 }]` | AI-generated photos served by the service at `GET /images/:file`; `[]` when an item has none |
+| `location` | `{ "lat": 59.923, "lng": 10.761, "area": "Grünerløkka", "precision": "approximate" }` | Rounded to ~100 m, inside a populated area of the municipality; never an exact address |
+| `published_at` | `"2026-10-24T20:14:00+02:00"` | ISO 8601, Norwegian local time; relative to today (the ad keeps its age, the date rolls forward daily) |
+
+The recommerce API has open CORS, so browsers on any origin can call it.
+
 ### API documentation
 
 Every API service publishes an OpenAPI 3.1 document and an interactive reference generated from its route definitions (via `@hono/zod-openapi` and Scalar):

@@ -202,6 +202,8 @@ All three services expose the same pattern under different entity names:
 | `GET /openapi.json` | OpenAPI 3.1 document generated from the route definitions |
 | `GET /docs` | Interactive API reference (Scalar) rendered from `/openapi.json` |
 
+api-recommerce also adds `location: {lat, lng, area, precision}` (approximate, within a populated area of the municipality) and `published_at` (ISO 8601, relative to today) to every item and hit. See its `AGENTS.md`.
+
 ### Search filter params (api-realestate)
 `q`, `county` (repeatable), `property_type`, `max_price`, `min_bedrooms`
 

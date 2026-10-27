@@ -168,6 +168,14 @@ The API is open to every origin. `src/server.js` registers Hono's built-in `cors
 - When changing a response shape (adapters, search hits, discovery hits), update `schemas.js` in the same change so the docs stay accurate. Never register plain `app.get()`/`app.post()` routes in the API router — they won't be documented or validated.
 
 
+## Location and Publish Time
+
+- **Location.** `src/generation/geo.js` has a few populated areas per municipality (district or town centres, radius 0.4–0.9 km, weight). Each listing gets a point in a weighted area, denser towards its centre, rounded to 3 decimals (~100 m). Area centres are public place centres, never addresses. The privacy report warns (`geo_outside_area`) if a point falls outside its municipality's areas.
+- **Publish time.** `src/generation/published.js` gives each listing a local publish minute (evening peak, quiet nights). The API builds `published_at` relative to today: `days_on_market` days ago at that minute, in Europe/Oslo time with offset. The date rolls forward daily, and ads published "today" are never placed in the future.
+- **Separate RNG streams.** Both are derived only from `listing_id` (+ municipality), each with its own RNG seeded via `seedFromString()`. `buildItem()` still draws the two RNG values of the old bounding-box sampler, so all other generated fields, and the image mapping, are unchanged. Don't remove those draws.
+- **Stored and versioned.** `latitude`, `longitude`, `location_area` and `publish_minute` are columns on `items`. `runs.derived_version` records `DERIVED_FIELDS_VERSION` (`src/generation/derived.js`). When it differs, startup recomputes the fields in place and rebuilds the privacy report, with no regeneration. Bump the version after changing areas or the time distribution.
+- **API.** Every item and hit has `location: { lat, lng, area, precision: 'approximate' }` and `published_at`. They're added in `routes/api.js` from `state.listingMeta`, not stored in the search documents, so the search index and embeddings are unaffected. `location_cluster` is unrelated to the position and unchanged.
+
 ## Item Images
 
 - On every start, `src/images/manifest.js` reads `images/manifest.json` (override with `--images <dir>`) and `store.replaceImages()` rewrites the `item_images` table (`listing_id, position, file, content_type, alt, width, height`). Without a manifest the table is cleared, so the API never references files that aren't served. A new manifest doesn't need a cold start; just restart the service.
