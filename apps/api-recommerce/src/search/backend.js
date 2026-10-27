@@ -250,14 +250,15 @@ export function createSearchBackend(searchConfig, documentRepository, embeddingS
       // Newest-first ignores relevance order, so a text query must actually match (keyword or synonym);
       // otherwise weak vector-only matches would surface at the top.
       if (request.sort === 'newest' && preparedQuery.normalizedText && lex <= 0) continue;
-      scored.push({ doc, score, lex, vec, biz, order: scored.length });
+      // Rank on the score rounded as in the hit (6 decimals), with ties in match order, as the API reports it.
+      scored.push({ doc, score, rankScore: Math.round(score * 1e6) / 1e6, lex, vec, biz, order: scored.length });
     }
 
     // Keep only the candidate pool (top N) instead of sorting every match. Newest-first ranks the whole
     // match set by recency, so the pool holds the newest matches rather than the most relevant ones.
     const compare = request.sort === 'newest'
       ? (a, b) => compareRecency(a.doc, b.doc)
-      : (a, b) => (b.score - a.score) || (a.order - b.order);
+      : (a, b) => (b.rankScore - a.rankScore) || (a.order - b.order);
     const toHit = ({ doc, score, lex, vec, biz }) => ({
       listing_id: doc.listing_id,
       title: doc.title,

@@ -136,7 +136,6 @@ function evaluateSnapshot(config, vehicles, behavior, baselineName, privacyWarni
       page: 1,
       page_size: 10,
       profile_context: request.profile_context,
-      language_hint: request.language_hint,
     };
     const response = app.search(payload);
     const hits = response.hits.slice(0, 10);

@@ -33,7 +33,6 @@ const SYNTHETIC_HOUSING_SYNONYMS = {
  * @property {string} normalizedText - Lowercased, tokenised, re-joined query text.
  * @property {string[]} tokens - Individual lowercase tokens.
  * @property {string[]} expandedQueries - Synonym-rewritten query strings.
- * @property {string|null} languageHint
  */
 
 /**
@@ -92,10 +91,9 @@ export function createQueryPreprocessor(searchConfig) {
   /**
    * Tokenises a query and optionally generates synonym expansions.
    * @param {string} queryText
-   * @param {string=} languageHint
    * @returns {PreparedQuery}
    */
-  function prepare(queryText, languageHint) {
+  function prepare(queryText) {
     const tokens = tokenize(queryText || '');
     const normalizedText = tokens.join(' ');
     let expansions = cache.get(normalizedText) || [];
@@ -103,7 +101,7 @@ export function createQueryPreprocessor(searchConfig) {
       expansions = expandTokens(tokens);
       cache.set(normalizedText, expansions);
     }
-    return { normalizedText, tokens, expandedQueries: expansions, languageHint: languageHint ?? null };
+    return { normalizedText, tokens, expandedQueries: expansions };
   }
 
   return { prepare, tokenize };

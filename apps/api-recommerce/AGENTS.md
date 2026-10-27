@@ -122,7 +122,7 @@ IDs follow the pattern of the other services: `itm-<seed>-<sequence>`, e.g. `itm
 |---|---|---|
 | `GET` | `/` | HTML demo |
 | `GET` | `/health` | `{"status":"ok"}` once ready (503 while building state) |
-| `POST` | `/search` | Hybrid search — `{query_text, filters, page, page_size, language_hint}` |
+| `POST` | `/search` | Hybrid search — `{query_text, filters, page, page_size, geo, sort}` (`language_hint` accepted but ignored) |
 | `POST` | `/discover/similar` | Similar items — `{listing_id, limit}` |
 | `POST` | `/discover/recommendations` | Recommendations — same body as `/search` plus optional `limit` |
 | `GET` | `/api/items/:id` | Single item document; `404` if not found |
@@ -166,6 +166,8 @@ The API is open to every origin. `src/server.js` registers Hono's built-in `cors
 - **FTS.** Prepared statements are reused per SQL variant. Relevance scores the best 200 text matches; `sort=newest` scores every match (`LIMIT` removed), so newest-first sees the whole match set.
 - **`published_at`.** `publishedAt()` reuses its `Intl.DateTimeFormat` objects and memoizes "today" per minute and offsets per local hour, at about 1 µs per call. Creating formatters per call cost about 150 µs.
 - **`/openapi.json`** is generated once, on first request, with `getOpenAPI31Document()`.
+- **Warm starts don't load behavior.** Search reads its behavior signals from SQLite (`store.getBehaviorSignals`). The raw sessions, queries and events are only generated on a cold start, and only loaded if the evaluation still has to run.
+- **No embedding cache.** Query embeddings are a cheap SHA-256 hash, and repeated queries are covered by the response cache, so an unbounded per-text cache only grew memory.
 - `topK.js`, `responseCache.js`, `geoAndRecency.js` and `published.js` are identical in all three API services; keep them in sync.
 
 ## API Documentation (OpenAPI)

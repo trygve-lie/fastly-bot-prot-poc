@@ -170,7 +170,7 @@ Defined in `src/schema/listing.js`. Key invariants:
 
 **`StructuredFilter`** — operators: `eq`, `lte`, `gte`, `in`. The `in` operator on `county` enables multi-county filtering. Allowed fields: `county`, `municipality`, `property_type`, `bedrooms`, `asking_price`, `total_price`, `energy_rating`, `days_on_market`, `listing_status`, `amenity_tags`.
 
-**`SearchRequest`** — carries `query_text`, `filters`, `page`, `page_size`, `profile_context`, `language_hint`.
+**`SearchRequest`** — carries `query_text`, `filters`, `page`, `page_size`, `profile_context`, `geo`, `sort`. (The HTTP body still accepts `language_hint` for compatibility; it's ignored.)
 
 **Search hit** — blended score: FTS5 BM25 lexical (or in-memory fallback) + cosine vector + business weight; augmented by reranker with filter match, geo fit, price fit, freshness, popularity.
 
@@ -193,7 +193,7 @@ All JSON-returning endpoints live in `src/routes/api.js`. The HTML demo lives in
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/health` | `{"status":"ok"}` |
-| `POST` | `/search` | Hybrid search — `{query_text, filters, page, page_size, language_hint}` |
+| `POST` | `/search` | Hybrid search — `{query_text, filters, page, page_size, geo, sort}` (`language_hint` accepted but ignored) |
 | `POST` | `/discover/similar` | Similar listings — `{listing_id, limit}` |
 | `POST` | `/discover/recommendations` | Recommendations — same body as `/search` plus optional `limit` |
 
@@ -328,6 +328,8 @@ Same behaviour as api-recommerce (`src/search/geoAndRecency.js` is an identical 
 - **FTS.** Prepared statements are reused per SQL variant. Relevance scores the best 200 text matches; `sort=newest` scores every match (`LIMIT` removed), so newest-first sees the whole match set.
 - **`published_at`.** `publishedAt()` reuses its `Intl.DateTimeFormat` objects and memoizes "today" per minute and offsets per local hour, at about 1 µs per call. Creating formatters per call cost about 150 µs.
 - **`/openapi.json`** is generated once, on first request, with `getOpenAPI31Document()`.
+- **Warm starts don't load behavior.** Search reads its behavior signals from SQLite (`store.getBehaviorSignals`). The raw sessions, queries and events are only generated on a cold start, and only loaded if the evaluation still has to run.
+- **No embedding cache.** Query embeddings are a cheap SHA-256 hash, and repeated queries are covered by the response cache, so an unbounded per-text cache only grew memory.
 - `topK.js`, `responseCache.js`, `geoAndRecency.js` and `published.js` are identical in all three API services; keep them in sync.
 
 ## API Documentation (OpenAPI)

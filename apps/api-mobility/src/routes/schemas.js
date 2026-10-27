@@ -173,7 +173,7 @@ export function createSchemas(config) {
     page: z.number().int().min(1).optional(),
     page_size: z.number().int().min(1).max(50).optional(),
     profile_context: z.record(z.string(), z.any()).optional(),
-    language_hint: z.string().nullable().optional().openapi({ example: 'no' }),
+    language_hint: z.string().nullable().optional().openapi({ example: 'no', description: 'Accepted for compatibility; not used' }),
     geo: GeoFilter.nullable().optional(),
     sort: z.enum(SORT_ORDERS).default('relevance').openapi({ description: '`relevance` (default) or `newest`' }),
   }).openapi('SearchRequest');

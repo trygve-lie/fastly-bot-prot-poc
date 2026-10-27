@@ -142,33 +142,3 @@ export function generateItemTimeline(config) {
 
   return output;
 }
-
-/**
- * Computes aggregate statistics over a timeline item array.
- * @param {Object} config
- * @param {import('../schema/item.js').Item[]} items
- * @returns {Object}
- */
-export function buildTimelineSummary(config, items) {
-  const byStatus = {};
-  const byDate = {};
-  const activeByDate = {};
-  for (const v of items) {
-    byStatus[v.listing_status] = (byStatus[v.listing_status] || 0) + 1;
-    byDate[v.snapshot_date] = (byDate[v.snapshot_date] || 0) + 1;
-    if (['created', 'active', 'updated', 'relisted'].includes(v.listing_status)) {
-      activeByDate[v.snapshot_date] = (activeByDate[v.snapshot_date] || 0) + 1;
-    }
-  }
-  return {
-    generated_at: new Date().toISOString(),
-    seed: config.seed,
-    config_hash: config.configHash(),
-    start_date: config.snapshot_date,
-    timeline_days: config.churn.timeline_days,
-    row_count: items.length,
-    by_status: Object.fromEntries(Object.entries(byStatus).sort()),
-    rows_by_date: Object.fromEntries(Object.entries(byDate).sort()),
-    active_rows_by_date: Object.fromEntries(Object.entries(activeByDate).sort()),
-  };
-}

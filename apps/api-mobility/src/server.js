@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config.js';
 import { generateVehicles, buildSummary } from './generation/vehicles.js';
 import { derivedFields, DERIVED_FIELDS_VERSION } from './generation/derived.js';
-import { generateSessions, buildBehaviorSummary } from './generation/behavior.js';
+import { generateSessions } from './generation/behavior.js';
 import { createSearchApplication } from './search/application.js';
 import { buildPrivacyReport } from './privacy/checks.js';
 import { runEvaluation } from './evaluation/runner.js';
@@ -61,13 +61,10 @@ function buildDemoState(config, dbPath) {
     derivedUpdated = true;
   }
 
-  let behavior;
-  if (store.hasBehavior(runId)) {
-    console.log('Loading behavior from SQLite…');
-    const { sessions, queries, ranking_labels, events } = store.getBehaviorByRunId(runId);
-    const summary = buildBehaviorSummary(config, sessions, queries, ranking_labels, events);
-    behavior = { sessions, queries, ranking_labels, events, summary };
-  } else {
+  // Behavior is only generated on a cold start. Search reads its behavior signals from SQLite
+  // (store.getBehaviorSignals), so a warm start doesn't load the raw sessions/queries/events.
+  let behavior = null;
+  if (!store.hasBehavior(runId)) {
     console.log('Generating behavior…');
     behavior = generateSessions(config, vehicles);
     store.saveBehavior(behavior, runId);
@@ -170,7 +167,8 @@ async function main() {
         setImmediate(() => {
           console.log('Running evaluation…');
           try {
-            const result = runEvaluation(config, state.vehicles, state.behavior, state.privacySummary.warnings.length);
+            const behavior = state.behavior ?? state.store.getBehaviorByRunId(state.runId);
+            const result = runEvaluation(config, state.vehicles, behavior, state.privacySummary.warnings.length);
             state.evaluationSummary = result.summary;
             state.store.saveEvaluation(state.runId, result.summary);
             console.log('Evaluation complete.');

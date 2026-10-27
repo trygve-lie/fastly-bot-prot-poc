@@ -36,7 +36,6 @@ const SYNTHETIC_VEHICLE_SYNONYMS = {
  * @property {string} normalizedText
  * @property {string[]} tokens
  * @property {string[]} expandedQueries
- * @property {string|null} languageHint
  */
 
 /**
@@ -89,10 +88,9 @@ export function createQueryPreprocessor(searchConfig) {
   /**
    * Tokenises a query and optionally generates synonym expansions.
    * @param {string} queryText
-   * @param {string=} languageHint
    * @returns {PreparedQuery}
    */
-  function prepare(queryText, languageHint) {
+  function prepare(queryText) {
     const tokens = tokenize(queryText || '');
     const normalizedText = tokens.join(' ');
     let expansions = cache.get(normalizedText) || [];
@@ -100,7 +98,7 @@ export function createQueryPreprocessor(searchConfig) {
       expansions = expandTokens(tokens);
       cache.set(normalizedText, expansions);
     }
-    return { normalizedText, tokens, expandedQueries: expansions, languageHint: languageHint ?? null };
+    return { normalizedText, tokens, expandedQueries: expansions };
   }
 
   return { prepare, tokenize };

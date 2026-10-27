@@ -2,7 +2,6 @@ import { createRng } from '../rng.js';
 import { derivedFields } from './derived.js';
 import { createVehicle } from '../schema/vehicle.js';
 import { buildTitle, buildText, buildDescription, MAKES_AND_MODELS } from './text.js';
-import { buildPrivacyReport } from '../privacy/checks.js';
 
 const MAKE_NAMES = Object.keys(MAKES_AND_MODELS);
 const MAKE_WEIGHTS_MAP = {
@@ -18,8 +17,6 @@ const COLOR_WEIGHTS = [0.22, 0.18, 0.16, 0.14, 0.12, 0.08, 0.05, 0.05];
 
 const LISTING_STATUS_VALUES = ['created', 'active', 'updated', 'relisted'];
 const LISTING_STATUS_WEIGHTS = [0.08, 0.68, 0.19, 0.05];
-
-const ALL_FEATURES = ['sunroof', 'tow_hitch', 'winter_wheels', 'leather_seats', 'heated_seats', 'navigation', 'cruise_control', 'apple_carplay', 'parking_sensors', 'blind_spot_warning', 'lane_assist', 'rear_camera'];
 
 // Municipalities that drew two RNG values for a (now replaced) bounding-box position. The draws are
 // kept so every other generated field stays identical.

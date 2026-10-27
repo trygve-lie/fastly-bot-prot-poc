@@ -13,27 +13,22 @@ import { createHash } from 'node:crypto';
  */
 export function createEmbeddingService(searchConfig) {
   const dimensions = searchConfig.embedding_dimensions;
-  const embeddingCache = new Map();
 
   /**
-   * Embeds text to a normalised fixed-dimension float vector, with result caching.
+   * Embeds text to a normalised fixed-dimension float vector (a SHA-256 hash, cheap enough not to cache).
    * @param {string} text
    * @returns {number[]}
    */
   function embedText(text) {
     const normalized = (text || '').trim().toLowerCase();
     if (!normalized) return new Array(dimensions).fill(0);
-    const cached = embeddingCache.get(normalized);
-    if (cached) return cached;
     const digest = createHash('sha256').update(normalized, 'utf-8').digest();
     const vector = new Array(dimensions);
     for (let i = 0; i < dimensions; i++) {
       const byte = digest[i % digest.length];
       vector[i] = (byte / 255.0) * 2.0 - 1.0;
     }
-    const result = normalize(vector);
-    embeddingCache.set(normalized, result);
-    return result;
+    return normalize(vector);
   }
 
   /**

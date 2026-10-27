@@ -3,7 +3,7 @@ import { createQueryPreprocessor } from './queryPreprocessor.js';
 import { createSearchBackend } from './backend.js';
 import { createReranker } from './reranker.js';
 import { createDiscoveryService } from '../discovery/service.js';
-import { activeSearchDocuments, buildBehaviorSignalMap, syntheticQueryToSearchRequest } from './adapters.js';
+import { activeSearchDocuments, buildBehaviorSignalMap } from './adapters.js';
 import { compareRecency } from './geoAndRecency.js';
 
 /**
@@ -79,7 +79,6 @@ function parseRequest(payload, defaultPageSize) {
     page: parseInt(payload.page) || 1,
     page_size: parseInt(payload.page_size) || defaultPageSize,
     profile_context: payload.profile_context || {},
-    language_hint: payload.language_hint || null,
     geo: parseGeo(payload.geo),
     sort: SORT_ORDERS.includes(payload.sort) ? payload.sort : 'relevance',
   };
@@ -136,9 +135,8 @@ export function createSearchApplication(config, listings, behaviorArtifacts, { s
   function search(payload) {
     const request = parseRequest(payload, config.search.default_page_size);
     const t0 = performance.now();
-    const t1 = performance.now();
-    const preparedQuery = queryPreprocessor.prepare(request.query_text, request.language_hint);
-    const preprocessMs = performance.now() - t1;
+    const preparedQuery = queryPreprocessor.prepare(request.query_text);
+    const preprocessMs = performance.now() - t0;
 
     const t2 = performance.now();
     const backendResult = searchBackend.search(request, preparedQuery);
@@ -188,7 +186,7 @@ export function createSearchApplication(config, listings, behaviorArtifacts, { s
     const request = parseRequest(payload, config.search.default_page_size);
     let reranked = precomputedHits;
     if (!reranked) {
-      const preparedQuery = queryPreprocessor.prepare(request.query_text, request.language_hint);
+      const preparedQuery = queryPreprocessor.prepare(request.query_text);
       const backendResult = searchBackend.search(request, preparedQuery);
       reranked = reranker.rerank(backendResult.hits, preparedQuery, request);
     }

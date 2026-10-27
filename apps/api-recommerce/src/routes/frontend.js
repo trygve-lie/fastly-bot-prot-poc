@@ -30,7 +30,7 @@ function renderHomePage(state, params) {
   if (maxPrice) filters.push({ field: 'total_price', operator: 'lte', value: parseInt(maxPrice) });
   if (shipping === 'true') filters.push({ field: 'shipping_available', operator: 'eq', value: true });
 
-  const searchPayload = { query_text: queryText, filters, page: 1, page_size: 10, language_hint: 'no' };
+  const searchPayload = { query_text: queryText, filters, page: 1, page_size: 10 };
   const searchResponse = (queryText || filters.length) ? state.app.search(searchPayload) : { hits: [], facets: {}, latency_breakdown: {} };
   const similar = listingId ? state.app.discoverSimilar({ listing_id: listingId, limit: 5 }) : { hits: [] };
   const recommendations = (queryText || filters.length) ? state.app.discoverRecommendations({ ...searchPayload, limit: 5 }, searchResponse.rerankedHits) : { hits: [] };

@@ -40,7 +40,6 @@ const ACTIVE_STATUSES = new Set(['created', 'active', 'updated', 'relisted']);
  * @property {number} page
  * @property {number} page_size
  * @property {Object} profile_context
- * @property {string|null} language_hint
  * @property {{ lat: number, lng: number, radius_km: number }|null} geo - Only results within radius_km of lat/lng
  * @property {'relevance'|'newest'} sort
  */
@@ -131,7 +130,6 @@ export function syntheticQueryToSearchRequest(query, defaultPageSize = 10) {
     page: 1,
     page_size: defaultPageSize,
     profile_context: { user_segment: query.user_segment },
-    language_hint: 'no',
   };
 }
 

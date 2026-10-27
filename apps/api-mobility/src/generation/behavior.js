@@ -343,7 +343,7 @@ export function generateSessions(config, vehicles) {
  * @param {import('../schema/interaction.js').Event[]} events
  * @returns {Object}
  */
-export function buildBehaviorSummary(config, sessions, queries, ranking_labels, events) {
+function buildBehaviorSummary(config, sessions, queries, ranking_labels, events) {
   const bySegment = {};
   for (const s of sessions) bySegment[s.user_segment] = (bySegment[s.user_segment] || 0) + 1;
   const byEventType = {};

@@ -41,7 +41,6 @@ function buildApiSearchPayload(query) {
     filters,
     page: query.page ?? 1,
     page_size: query.page_size ?? 10,
-    language_hint: 'no',
     geo: query.radius_km != null ? { lat: query.lat, lng: query.lng, radius_km: query.radius_km } : null,
     sort: query.sort ?? 'relevance',
   };

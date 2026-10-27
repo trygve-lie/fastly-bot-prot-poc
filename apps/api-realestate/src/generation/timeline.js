@@ -148,33 +148,3 @@ export function generateListingTimeline(config) {
 
   return output;
 }
-
-/**
- * Computes summary statistics over a timeline listing set.
- * @param {import('../config.js').Config} config
- * @param {import('../schema/listing.js').Listing[]} listings
- * @returns {Object} Timeline summary with row counts by status and date.
- */
-export function buildTimelineSummary(config, listings) {
-  const byStatus = {};
-  const byDate = {};
-  const activeByDate = {};
-  for (const l of listings) {
-    byStatus[l.listing_status] = (byStatus[l.listing_status] || 0) + 1;
-    byDate[l.snapshot_date] = (byDate[l.snapshot_date] || 0) + 1;
-    if (['created', 'active', 'updated', 'relisted'].includes(l.listing_status)) {
-      activeByDate[l.snapshot_date] = (activeByDate[l.snapshot_date] || 0) + 1;
-    }
-  }
-  return {
-    generated_at: new Date().toISOString(),
-    seed: config.seed,
-    config_hash: config.configHash(),
-    start_date: config.snapshot_date,
-    timeline_days: config.churn.timeline_days,
-    row_count: listings.length,
-    by_status: Object.fromEntries(Object.entries(byStatus).sort()),
-    rows_by_date: Object.fromEntries(Object.entries(byDate).sort()),
-    active_rows_by_date: Object.fromEntries(Object.entries(activeByDate).sort()),
-  };
-}
