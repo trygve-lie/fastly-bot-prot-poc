@@ -203,7 +203,7 @@ All JSON-returning endpoints live in `src/routes/api.js`. The HTML demo lives in
 |---|---|---|
 | `GET` | `/api/listings/:id` | Single listing document; `404` if not found |
 | `GET` | `/api/listings/:id/similar` | Similar listings; query: `limit` |
-| `GET` | `/api/search` | Search; query: `q`, `county` (repeatable), `property_type`, `max_price`, `page`, `page_size` |
+| `GET` | `/api/search` | Search; query: `q`, `county` (repeatable), `property_type`, `min_price`, `max_price`, `lat` + `lng` + `radius_km`, `sort` (`relevance`/`newest`), `page`, `page_size` |
 | `GET` | `/api/recommendations` | Browse feed when no `q` (query: `cluster`, `limit`); search-derived recommendations when `q` is present |
 
 Multi-county: `?county=Oslo&county=Vestland` — the `county` param is repeatable and produces an `in` filter internally.
@@ -310,6 +310,16 @@ Same implementation as api-recommerce (the modules are copies; keep them in sync
 - **Separate RNG streams.** Both are derived only from `listing_id` (+ municipality), each with its own RNG seeded via `seedFromString()`. `buildListing()` in `src/generation/listings.js` still draws the two RNG values of the old bounding-box sampler, so all other generated fields are unchanged. Don't remove those draws.
 - **Stored and versioned.** `latitude`, `longitude`, `location_area` and `publish_minute` are columns on `listings`. `runs.derived_version` records `DERIVED_FIELDS_VERSION` (`src/generation/derived.js`). When it differs, startup recomputes the fields in place and rebuilds the privacy report, with no regeneration. Bump the version after changing areas or the time distribution.
 - **API.** Every listing and hit has `location: { lat, lng, area, precision: 'approximate' }` and `published_at`. They're added in `routes/api.js` from `state.listingMeta`, not stored in the search documents, so the search index and embeddings are unaffected. `neighborhood_cluster` is unrelated to the position and unchanged.
+
+### Geo, price and newest-first search
+
+Same behaviour as api-recommerce (`src/search/geoAndRecency.js` is an identical copy; keep it in sync):
+
+- **Price:** `min_price` / `max_price` become `total_price` `gte` / `lte` filters. `min_price > max_price` is a 400.
+- **Radius:** `lat` + `lng` + `radius_km` (all three or none, radius up to 500 km) become `geo` on the search request. The backend drops candidates outside the radius before scoring, so facets and counts reflect the radius. Hits get `distance_km`, and the reranker's geo fit is `1 - distance / radius`. `POST /search` takes `geo: { lat, lng, radius_km }` directly.
+- **Newest first:** `sort=newest` orders by `days_on_market` ascending, then `publish_minute` descending (`compareRecency`). It's applied before the 50-candidate pool is cut, so the pool holds the newest matches, and again after reranking. With a text query it only keeps real keyword or synonym matches (lexical score > 0), because vector similarity alone matches almost everything.
+- The search documents carry `latitude`, `longitude` and `publish_minute` for this. They're not part of the search text or embeddings, and `routes/api.js` strips them from responses in favour of `location` / `published_at`.
+- `/api/recommendations?q=` accepts the same price and radius parameters, but not `sort`.
 
 ## API Documentation (OpenAPI)
 

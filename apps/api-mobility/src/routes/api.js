@@ -32,6 +32,7 @@ function buildApiSearchPayload(query) {
   if (counties.length === 1) filters.push({ field: 'county', operator: 'eq', value: counties[0] });
   else if (counties.length > 1) filters.push({ field: 'county', operator: 'in', value: counties });
   if (query.vehicle_type) filters.push({ field: 'vehicle_type', operator: 'eq', value: query.vehicle_type });
+  if (query.min_price != null) filters.push({ field: 'total_price', operator: 'gte', value: query.min_price });
   if (query.max_price != null) filters.push({ field: 'total_price', operator: 'lte', value: query.max_price });
   if (query.max_mileage != null) filters.push({ field: 'mileage_km', operator: 'lte', value: query.max_mileage });
   return {
@@ -40,6 +41,8 @@ function buildApiSearchPayload(query) {
     page: query.page ?? 1,
     page_size: query.page_size ?? 10,
     language_hint: 'no',
+    geo: query.radius_km != null ? { lat: query.lat, lng: query.lng, radius_km: query.radius_km } : null,
+    sort: query.sort ?? 'relevance',
   };
 }
 
@@ -68,7 +71,7 @@ function defineRoutes(s) {
     search: createRoute({
       method: 'get', path: '/api/search', tags: ['Search'],
       summary: 'Search vehicles',
-      description: 'Hybrid full-text (FTS5 BM25 with Norwegian/English synonym expansion) and vector search with structured filters, reranking and facets.',
+      description: 'Hybrid full-text (FTS5 BM25 with Norwegian/English synonym expansion) and vector search with structured filters, reranking and facets. Filter by price with `min_price`/`max_price`, by distance with `lat` + `lng` + `radius_km` (hits then include `distance_km`), and use `sort=newest` for the most recently published first. Results are capped at the 50 best (or, with `sort=newest`, 50 newest) matches.',
       request: { query: s.SearchQuery },
       responses: { 200: jsonResponse(s.SearchResponse, 'Paged search results with facets'), 400: invalid },
     }),
@@ -140,7 +143,8 @@ export function createApiRouter(state) {
   const routes = defineRoutes(schemas);
   const notFound = (c, id) => c.json({ error: 'Not found', listing_id: id }, 404);
   // Adds approximate location and publish time to a vehicle or hit.
-  const withDetails = item => {
+  const withDetails = ({ latitude, longitude, publish_minute, ...item }) => {
+    // latitude/longitude/publish_minute are internal search-document fields; exposed as location/published_at.
     const meta = state.listingMeta.get(item.listing_id);
     return {
       ...item,
@@ -160,6 +164,8 @@ export function createApiRouter(state) {
       filters: payload.filters,
       page: payload.page,
       page_size: payload.page_size,
+      geo: payload.geo,
+      sort: payload.sort,
       hits: result.hits.map(withDetails),
       facets: result.facets,
       latency_breakdown: result.latency_breakdown,

@@ -21,6 +21,9 @@ const ACTIVE_STATUSES = new Set(['created', 'active', 'updated', 'relisted']);
  * @property {number} business_weight
  * @property {string} language
  * @property {number[]} embedding
+ * @property {number|null} latitude - Approximate position, used by the geo radius filter
+ * @property {number|null} longitude
+ * @property {number|null} publish_minute - Local publish minute, tie-breaker for newest-first sorting
  */
 
 /**
@@ -38,6 +41,8 @@ const ACTIVE_STATUSES = new Set(['created', 'active', 'updated', 'relisted']);
  * @property {number} page_size
  * @property {Object} profile_context
  * @property {string|null} language_hint
+ * @property {{ lat: number, lng: number, radius_km: number }|null} geo - Only results within radius_km of lat/lng
+ * @property {'relevance'|'newest'} sort
  */
 
 /**
@@ -88,6 +93,10 @@ export function listingToSearchDocument(listing) {
     business_weight: Math.round(popularity_prior * 10000) / 10000,
     language: 'no',
     embedding: [],
+    // Not part of the search text or embedding; used by the geo filter and newest-first sorting.
+    latitude: listing.latitude ?? null,
+    longitude: listing.longitude ?? null,
+    publish_minute: listing.publish_minute ?? null,
   };
 }
 

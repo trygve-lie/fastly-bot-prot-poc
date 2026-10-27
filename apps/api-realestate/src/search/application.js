@@ -4,6 +4,7 @@ import { createSearchBackend } from './backend.js';
 import { createReranker } from './reranker.js';
 import { createDiscoveryService } from '../discovery/service.js';
 import { activeSearchDocuments, buildBehaviorSignalMap, syntheticQueryToSearchRequest } from './adapters.js';
+import { compareRecency } from './geoAndRecency.js';
 
 /**
  * @typedef {Object} DocumentRepository
@@ -33,6 +34,7 @@ function createDocumentRepository() {
 }
 
 export const FILTER_OPERATORS = ['eq', 'lte', 'gte', 'in'];
+export const SORT_ORDERS = ['relevance', 'newest'];
 export const FILTER_FIELDS = ['county', 'municipality', 'property_type', 'bedrooms', 'asking_price', 'total_price', 'energy_rating', 'days_on_market', 'listing_status', 'amenity_tags'];
 
 /**
@@ -51,6 +53,20 @@ function parseFilters(rawFilters) {
 }
 
 /**
+ * Validates an optional geo radius filter ({ lat, lng, radius_km }).
+ * @param {Object|null|undefined} rawGeo
+ * @returns {{ lat: number, lng: number, radius_km: number }|null}
+ */
+function parseGeo(rawGeo) {
+  if (rawGeo == null) return null;
+  const lat = Number(rawGeo.lat), lng = Number(rawGeo.lng), radius_km = Number(rawGeo.radius_km);
+  if (![lat, lng, radius_km].every(Number.isFinite) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || radius_km <= 0) {
+    throw new Error('geo filter needs numeric lat (-90..90), lng (-180..180) and radius_km > 0');
+  }
+  return { lat, lng, radius_km };
+}
+
+/**
  * Parses and normalises a raw search payload into a typed SearchRequest.
  * @param {Object} payload
  * @param {number} defaultPageSize
@@ -64,6 +80,8 @@ function parseRequest(payload, defaultPageSize) {
     page_size: parseInt(payload.page_size) || defaultPageSize,
     profile_context: payload.profile_context || {},
     language_hint: payload.language_hint || null,
+    geo: parseGeo(payload.geo),
+    sort: SORT_ORDERS.includes(payload.sort) ? payload.sort : 'relevance',
   };
 }
 
@@ -127,7 +145,11 @@ export function createSearchApplication(config, listings, behaviorArtifacts, { s
     const retrievalMs = performance.now() - t2;
 
     const t3 = performance.now();
-    const reranked = reranker.rerank(backendResult.hits, preparedQuery, request);
+    let reranked = reranker.rerank(backendResult.hits, preparedQuery, request);
+    // The reranker re-sorts by score; restore newest-first order when requested.
+    if (request.sort === 'newest') {
+      reranked = reranked.sort((a, b) => compareRecency(documentRepository.get(a.listing_id), documentRepository.get(b.listing_id)));
+    }
     const rerankMs = performance.now() - t3;
 
     const startIndex = Math.max(request.page - 1, 0) * request.page_size;

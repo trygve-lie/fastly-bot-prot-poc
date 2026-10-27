@@ -1,7 +1,22 @@
 import { z } from '@hono/zod-openapi';
-import { FILTER_FIELDS, FILTER_OPERATORS } from '../search/application.js';
+import { FILTER_FIELDS, FILTER_OPERATORS, SORT_ORDERS } from '../search/application.js';
 
 const LISTING_STATUSES = ['created', 'active', 'updated', 'sold', 'removed', 'relisted'];
+
+/**
+ * Cross-field query rules: lat, lng and radius_km go together, and min_price must not exceed max_price.
+ * @param {Object} query
+ * @param {import('zod').RefinementCtx} ctx
+ */
+function geoAndPriceRules(query, ctx) {
+  const geoParams = ['lat', 'lng', 'radius_km'].filter(k => query[k] != null);
+  if (geoParams.length && geoParams.length < 3) {
+    ctx.addIssue({ code: 'custom', path: ['radius_km'], message: 'lat, lng and radius_km must be given together' });
+  }
+  if (query.min_price != null && query.max_price != null && query.min_price > query.max_price) {
+    ctx.addIssue({ code: 'custom', path: ['min_price'], message: 'min_price must not be greater than max_price' });
+  }
+}
 
 /**
  * Builds all request/response schemas for the OpenAPI document. Enums that come from
@@ -94,6 +109,7 @@ export function createSchemas(config) {
     freshness_score: z.number(),
     popularity_score: z.number(),
     explanation: z.string(),
+    distance_km: z.number().optional().openapi({ example: 1.24, description: 'Distance from lat/lng; only set when searching within a radius' }),
   }).openapi('SearchHit');
 
   const FacetCounts = z.record(z.string(), z.number().int());
@@ -112,19 +128,33 @@ export function createSchemas(config) {
     total_ms: z.number(),
   }).openapi('LatencyBreakdown');
 
-  const SearchQuery = z.object({
+  const SearchQueryBase = z.object({
     q: z.string().optional().openapi({ example: 'cabin', description: 'Free-text query (Norwegian/English synonyms are expanded)' }),
     county: z.union([z.enum(counties), z.array(z.enum(counties))]).optional()
       .openapi({ description: 'Repeatable: ?county=Oslo&county=Vestland', example: 'Oslo' }),
     property_type: z.enum(property_types).optional(),
+    min_price: z.coerce.number().int().min(0).optional().openapi({ example: 2000000, description: 'Lower bound on total_price (NOK)' }),
     max_price: z.coerce.number().int().min(0).optional().openapi({ example: 5000000, description: 'Upper bound on total_price (NOK)' }),
+    lat: z.coerce.number().min(-90).max(90).optional().openapi({ example: 59.9139, description: 'Latitude of the search centre. Use together with lng and radius_km.' }),
+    lng: z.coerce.number().min(-180).max(180).optional().openapi({ example: 10.7522, description: 'Longitude of the search centre. Use together with lat and radius_km.' }),
+    radius_km: z.coerce.number().gt(0).max(500).optional().openapi({ example: 5, description: 'Only listings within this distance of lat/lng. Use together with lat and lng.' }),
+    sort: z.enum(SORT_ORDERS).default('relevance').openapi({ description: '`relevance` (default) or `newest` (most recently published first)' }),
     page: z.coerce.number().int().min(1).default(1),
     page_size: z.coerce.number().int().min(1).max(50).default(10),
   });
+  const SearchQuery = SearchQueryBase.superRefine(geoAndPriceRules);
+
+  const GeoFilter = z.object({
+    lat: z.number().min(-90).max(90).openapi({ example: 59.9139 }),
+    lng: z.number().min(-180).max(180).openapi({ example: 10.7522 }),
+    radius_km: z.number().gt(0).max(500).openapi({ example: 5 }),
+  }).openapi('GeoFilter', { description: 'Only results within radius_km of lat/lng' });
 
   const SearchResponse = z.object({
     query: z.string(),
     filters: z.array(StructuredFilter),
+    geo: GeoFilter.nullable(),
+    sort: z.enum(SORT_ORDERS),
     page: z.number().int(),
     page_size: z.number().int(),
     hits: z.array(SearchHit),
@@ -139,6 +169,8 @@ export function createSchemas(config) {
     page_size: z.number().int().min(1).max(50).optional(),
     profile_context: z.record(z.string(), z.any()).optional(),
     language_hint: z.string().nullable().optional().openapi({ example: 'no' }),
+    geo: GeoFilter.nullable().optional(),
+    sort: z.enum(SORT_ORDERS).default('relevance').openapi({ description: '`relevance` (default) or `newest`' }),
   }).openapi('SearchRequest');
 
   const RawSearchResponse = z.object({
@@ -180,10 +212,10 @@ export function createSchemas(config) {
     hits: z.array(DiscoveryHit),
   }).openapi('IntentResponse');
 
-  const RecommendationsQuery = SearchQuery.omit({ page: true, page_size: true }).extend({
+  const RecommendationsQuery = SearchQueryBase.omit({ page: true, page_size: true, sort: true }).extend({
     cluster: Cluster.optional(),
     limit: z.coerce.number().int().min(1).max(50).optional(),
-  });
+  }).superRefine(geoAndPriceRules);
 
   const RecommendationsResponse = z.object({
     surface: z.enum(['browse', 'search_recommendations']),

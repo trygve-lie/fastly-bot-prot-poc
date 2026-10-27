@@ -185,6 +185,7 @@ api-realestate and api-mobility have copies of these modules (`geo.js`, `publish
 - **Newest first:** `sort=newest` orders by `days_on_market` ascending, then `publish_minute` descending (`compareRecency` in `src/search/geoAndRecency.js`). It's applied before the 50-candidate pool is cut, so the pool holds the newest matches, and again after reranking. With a text query it only keeps real keyword or synonym matches (lexical score > 0), because vector similarity alone matches almost everything.
 - The search documents carry `latitude`, `longitude` and `publish_minute` for this. They're not part of the search text or embeddings, and `routes/api.js` strips them from responses in favour of `location` / `published_at`.
 - `/api/recommendations?q=` accepts the same price and radius parameters, but not `sort`.
+- api-realestate and api-mobility have the same search options, and an identical copy of `geoAndRecency.js`; keep them in sync.
 
 ## Item Images
 

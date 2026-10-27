@@ -204,11 +204,13 @@ All three services expose the same pattern under different entity names:
 
 All three services add `location: {lat, lng, area, precision}` (approximate, within a populated area of the municipality) and `published_at` (ISO 8601, relative to today) to every item and hit. api-recommerce also adds `images`. The generation modules (`src/generation/geo.js`, `published.js`, `seed.js`, `derived.js`) are identical copies in each service; keep them in sync. See each service's `AGENTS.md`.
 
+All three services: `lat` + `lng` + `radius_km` restrict results to a radius (hits then include `distance_km`); `sort=newest` orders by publish time; `page`, `page_size` for paging. Results are capped at 50 matches.
+
 ### Search filter params (api-realestate)
-`q`, `county` (repeatable), `property_type`, `max_price`, `min_bedrooms`
+`q`, `county` (repeatable), `property_type`, `min_price`, `max_price`, `lat` + `lng` + `radius_km`, `sort=relevance|newest`
 
 ### Search filter params (api-mobility)
-`q`, `county` (repeatable), `vehicle_type`, `fuel_type`, `max_price`, `max_mileage`
+`q`, `county` (repeatable), `vehicle_type`, `min_price`, `max_price`, `max_mileage`, `lat` + `lng` + `radius_km`, `sort=relevance|newest`
 
 ### Search filter params (api-recommerce)
 `q`, `county` (repeatable), `category`, `subcategory`, `brand`, `condition`, `min_price`, `max_price`, `lat` + `lng` + `radius_km` (geo radius; hits get `distance_km`), `shipping=true`, `sort=relevance|newest`

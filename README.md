@@ -116,7 +116,8 @@ All three API services expose identical endpoint patterns for their respective d
 
 ```
 GET /health
-GET /api/search          ?q, county, property_type, max_price, min_bedrooms, page, page_size
+GET /api/search          ?q, county, property_type, min_price, max_price,
+                          lat, lng, radius_km, sort=relevance|newest, page, page_size
 GET /api/listings/:id
 GET /api/listings/:id/similar
 GET /api/intent          ?limit  →  {intent, cluster, hits[]}
@@ -128,7 +129,8 @@ GET /                    HTML demo UI
 ### Mobility endpoints
 
 ```
-GET /api/search          ?q, county, vehicle_type, fuel_type, max_price, max_mileage
+GET /api/search          ?q, county, vehicle_type, min_price, max_price, max_mileage,
+                          lat, lng, radius_km, sort=relevance|newest
 GET /api/vehicles/:id
 GET /api/vehicles/:id/similar
 GET /api/intent, /api/recommendations, /api/sitemap  (same pattern)
