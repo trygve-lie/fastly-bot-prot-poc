@@ -27,7 +27,7 @@ The live domain is `typegear.app`, served via Fastly (Frankfurt region) → Rend
     │   ├── package.json
     │   ├── public/
     │   │   ├── client.js      ← browser JS: PWA install, drawer nav, pageswap handler
-    │   │   ├── sw.js          ← minimal passthrough service worker (PWA installability only)
+    │   │   ├── sw.js          ← minimal service worker, no fetch handler (PWA installability only)
     │   │   ├── manifest.json  ← PWA manifest (id: marketplace, display: standalone)
     │   │   ├── awesome/3.13.0/  ← vendored WebAwesome; immutable, never edit
     │   │   └── icons/
@@ -286,7 +286,7 @@ Use `Surrogate-Key` for targeted Fastly purges. Purge all realestate pages: `POS
 ## PWA
 
 - `manifest.json`: `display: standalone`, `id: marketplace`, four vertical shortcuts (realestate, mobility, job, recommerce), `theme_color: #ffffff`, `background_color: #ffffff`
-- `sw.js`: minimal passthrough — exists only for PWA installability, does not cache anything
+- `sw.js`: minimal service worker — exists only for PWA installability. It has **no fetch handler** on purpose: intercepting requests with `respondWith(fetch(...))` breaks Fastly's bot challenge (failed fetches become `ERR_FAILED` instead of showing the challenge). Do not add a fetch handler that intercepts navigations or `/_fs-ch-*` requests.
 - `viewport-fit=cover` in the viewport meta, with `env(safe-area-inset-*)` used in `layout.css` for notch/home-indicator clearance
 - `apple-mobile-web-app-status-bar-style: black-translucent` for iOS edge-to-edge
 
